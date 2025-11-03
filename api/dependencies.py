@@ -2,11 +2,12 @@
 Dépendances FastAPI
 """
 import secrets
-from fastapi import Depends, HTTPException, status, Header, Path
+from fastapi import Depends, HTTPException, status, Header, Path, Request # ❗️ Ajout de Request
 from sqlalchemy.orm import Session
-from database import SessionLocal, Project, Config
+from database import SessionLocal, Project
+from config import Config # ❗️ Ajout de Config
 
-config = Config()
+config_global = Config() # ❗️ Renommé pour éviter confusion
 
 def get_db():
     db = SessionLocal()
@@ -14,6 +15,11 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# ❗️ NOUVEAU: Permet d'injecter la config (chargée au démarrage) dans les routes
+def get_config_from_state(request: Request) -> Config:
+    """Récupère l'instance de Config depuis app.state"""
+    return request.app.state.config
 
 def get_project_from_key(
     project_name: str = Path(..., description="Le nom du projet"),
@@ -48,7 +54,7 @@ def verify_admin_access(
     """
     # Nous avons besoin de récupérer la clé du projet admin
     # (Note: app.state n'est pas accessible ici, nous le chargeons)
-    admin_project = db.query(Project).filter(Project.name == config.default_technical_project).first()
+    admin_project = db.query(Project).filter(Project.name == config_global.default_technical_project).first()
     
     if not admin_project:
         raise HTTPException(

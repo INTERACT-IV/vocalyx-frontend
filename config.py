@@ -6,7 +6,7 @@ import os
 import logging
 import configparser
 from pathlib import Path
-from typing import List
+from typing import List, Set # ❗️ Ajout de Set
 
 class Config:
     """Charge et gère la configuration depuis config.ini"""
@@ -47,6 +47,17 @@ class Config:
             'urls': 'http://localhost:8001'
         }
         
+        # ❗️ AJOUT
+        config['SECURITY'] = {
+            'internal_api_key': 'change_me_to_a_secure_secret_key'
+        }
+        
+        # ❗️ AJOUT
+        config['LIMITS'] = {
+            'max_file_size_mb': '100',
+            'allowed_extensions': 'wav,mp3,m4a,flac,ogg,webm'
+        }
+        
         with open(self.config_file, 'w') as f:
             config.write(f)
         
@@ -73,6 +84,18 @@ class Config:
         self.worker_urls: List[str] = [
             url.strip() for url in worker_urls_str.split(',') if url.strip()
         ]
+        
+        # ❗️ AJOUT: SECURITY
+        self.internal_api_key = self.config.get('SECURITY', 'internal_api_key', fallback=None)
+        if not self.internal_api_key or self.internal_api_key == 'change_me_to_a_secure_secret_key':
+            logging.warning("⚠️ Clé d'API interne non définie ou par défaut. Communication inter-services non sécurisée.")
+            self.internal_api_key = None
+            
+        # ❗️ AJOUT: LIMITS
+        self.max_file_size_mb = self.config.getint('LIMITS', 'max_file_size_mb', fallback=100)
+        self.allowed_extensions: Set[str] = set(
+            ext.strip().lower() for ext in self.config.get('LIMITS', 'allowed_extensions', fallback='wav,mp3').split(',')
+        )
         
         # Créer les répertoires
         self.upload_dir.mkdir(exist_ok=True)
