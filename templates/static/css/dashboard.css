@@ -1,0 +1,456 @@
+/* dashboard.css */
+:root {
+    --primary: #4a90e2;
+    --success: #28a745;
+    --warning: #ffc107;
+    --danger: #dc3545;
+    --light: #f8f9fa;
+    --dark: #343a40;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    background: #f0f2f5;
+    color: #333;
+}
+
+header {
+    position: sticky;
+    top: 0;
+    background: linear-gradient(90deg, var(--primary), #357ABD);
+    padding: 0.7rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1000;
+    color: white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.filters {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.filters label {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.filters select, .filters input {
+    padding: 0.3rem 0.5rem;
+    border-radius: 6px;
+    border: none;
+    background: white;
+    color: #333;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.filters select:hover, .filters input:hover {
+    background: #e0e0e0;
+}
+
+.btn {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0.3rem 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+}
+
+.btn:hover {
+    opacity: 0.9;
+    transform: scale(1.02);
+}
+
+.btn-primary {
+    background: var(--primary);
+}
+
+.btn-success {
+    background: var(--success);
+}
+
+.btn-warning {
+    background: var(--warning);
+    color: #212529;
+}
+
+.btn-danger {
+    background: var(--danger);
+}
+
+/* Styles pour le statut des workers */
+#worker-status-container {
+    background: rgba(255,255,255,0.2);
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.worker-status-light {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: gray;
+}
+.worker-status-light.status-ok {
+    background: var(--success);
+}
+.worker-status-light.status-busy {
+    background: var(--warning);
+}
+.worker-status-light.status-error {
+    background: var(--danger);
+    animation: pulse 1.5s infinite;
+}
+
+#current-time {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+h1, h2 {
+    text-align: center;
+    margin: 1.5rem 0 1rem 0;
+    color: #333;
+}
+h1 {
+    font-size: 1.6rem;
+}
+h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+/* Styles pour le tableau de monitoring */
+.worker-monitoring-table {
+    table-layout: fixed;
+}
+.worker-monitoring-table .col-instance { width: 18%; }
+.worker-monitoring-table .col-status { width: 8%; }
+.worker-monitoring-table .col-charge-num { width: 8%; }
+.worker-monitoring-table .col-charge-bar { width: 8%; }
+.worker-monitoring-table .col-cpu-num { width: 8%; }
+.worker-monitoring-table .col-cpu-bar { width: 8%; }
+.worker-monitoring-table .col-ram-num { width: 8%; }
+.worker-monitoring-table .col-ram-bar { width: 8%; }
+.worker-monitoring-table .col-uptime { width: 8%; }
+.worker-monitoring-table .col-jobs { width: 8%; }
+.worker-monitoring-table .col-audio { width: 10%; }
+
+
+/* Statut offline pour la ligne */
+.worker-monitoring-table tr.status-offline {
+    opacity: 0.7;
+    background: #fff8f8;
+}
+
+/* Barres de progression */
+.progress-bar {
+    width: 100%;
+    background: #e0e0e0;
+    border-radius: 4px;
+    height: 18px;
+    overflow: hidden;
+}
+.progress-bar.small {
+    height: 16px;
+    line-height: 16px;
+    margin-top: 0; 
+}
+
+.progress-bar-inner {
+    height: 100%;
+    background: var(--primary);
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 18px;
+    text-align: center;
+    transition: width 0.4s ease;
+}
+.progress-bar.small .progress-bar-inner {
+    line-height: 16px;
+    font-size: 0.75rem;
+    text-align: center; 
+}
+.progress-bar-inner.high-usage {
+    background: var(--warning);
+    color: #333;
+}
+
+/* Style pour le texte au-dessus (espacement corrigé) */
+.bar-chart-text {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 3px; 
+}
+
+
+/* Styles pour la Grid de Transcriptions */
+.grid-container {
+    width: 98%; 
+    margin: 1rem auto;
+    overflow-x: auto;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+
+.grid-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem; 
+    table-layout: fixed; 
+}
+
+.grid-table th, 
+.grid-table td {
+    padding: 0.5rem 0.8rem; 
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+    word-wrap: break-word; 
+}
+
+.grid-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    color: #555;
+}
+
+.grid-table tbody tr {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.grid-table tbody tr:hover {
+    background-color: #f5f5f5;
+}
+
+.grid-table td .btn-danger {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+/* Dimensions des colonnes des Transcriptions */
+.grid-table .col-status { width: 10%; }
+.grid-table .col-project { width: 10%; }
+.grid-table .col-id { width: 30%; } 
+.grid-table .col-instance { width: 10%; }
+.grid-table .col-lang { width: 5%; }
+.grid-table .col-duree { width: 5%; }
+.grid-table .col-process { width: 5%; }
+.grid-table .col-date { width: 17%; }
+.grid-table .col-actions { width: 8%; }
+
+/* Indicateurs de statut dans la grille */
+.status-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 8px;
+    background: gray;
+}
+.status-text {
+    text-transform: capitalize;
+}
+
+.status-pending .status-indicator { background: #6c757d; }
+.status-processing .status-indicator { 
+    background: var(--warning); 
+    animation: pulse 2s infinite;
+}
+.status-done .status-indicator { background: var(--success); }
+.status-error .status-indicator { background: var(--danger); }
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+    animation: fadeIn 0.3s;
+}
+
+.modal-content {
+    background-color: #ffffff;
+    margin: 3% auto;
+    padding: 1.5rem;
+    border-radius: 14px;
+    width: 90%;
+    max-width: 1000px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+    position: relative;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: scaleIn 0.3s;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 1.5rem;
+    font-weight: bold;
+    position: absolute;
+    right: 1rem;
+    top: 0.5rem;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close:hover {
+    color: black;
+}
+
+.segment {
+    border-bottom: 1px solid #ddd;
+    padding: 0.5rem 0;
+    cursor: pointer;
+}
+
+.segment:hover {
+    background: #f0f0f0;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+    from { transform: scale(0.95); }
+    to { transform: scale(1); }
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 1rem 0;
+}
+
+.pagination button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    background: var(--light);
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.pagination button:hover {
+    background: #d0d0d0;
+}
+
+.pagination button.active {
+    background: var(--primary);
+    color: white;
+}
+
+button:focus, [tabindex="0"]:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--primary);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* NOUVEAUX STYLES POUR LES FORMULAIRES DES MODALES */
+.form-group {
+    margin-bottom: 1rem;
+}
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+}
+.form-group input[type="text"],
+.form-group input[type="password"],
+.form-group input[type="file"],
+.form-group select {
+    width: 100%;
+    padding: 0.6rem;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    box-sizing: border-box; /* Important */
+    font-size: 1rem;
+}
+.form-group small {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.8rem;
+    color: #555;
+}
+
+.form-group-inline {
+    display: flex;
+    gap: 0.5rem;
+}
+.form-group-inline input {
+    flex: 1;
+    padding: 0.6rem;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+}
+
+.api-key-reveal {
+    width: 100%;
+    cursor: pointer;
+    border: none;
+    background: #f0f0f0;
+    font-family: monospace;
+}
+.api-key-reveal:hover {
+    background: #e0e0e0;
+}

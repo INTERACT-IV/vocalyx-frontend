@@ -1,0 +1,33 @@
+"""
+Schémas Pydantic pour les modèles de données
+"""
+
+from typing import Optional, List
+from pydantic import BaseModel
+from datetime import datetime
+
+class ProjectResult(BaseModel):
+    """Projet tel que retourné à l'UI (sans clé API)"""
+    id: str
+    name: str
+    created_at: datetime
+
+class ProjectDetails(ProjectResult):
+    """Détails complets du projet, y compris la clé"""
+    api_key: str
+
+class TranscriptionResult(BaseModel):
+    id: str
+    status: str
+    project_name: Optional[str] = None
+    worker_id: Optional[str] = None
+    language: Optional[str] = None
+    processing_time: Optional[float] = None
+    duration: Optional[float] = None
+    text: Optional[str] = None
+    segments: Optional[list] = None
+    error_message: Optional[str] = None
+    segments_count: Optional[int] = None
+    vad_enabled: Optional[bool] = None
+    created_at: Optional[str] = None
+    finished_at: Optional[str] = None

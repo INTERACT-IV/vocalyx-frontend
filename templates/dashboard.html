@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Vocalyx - Transcriptions Dashboard</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastr@2.1.4/build/toastr.min.css">
+<link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+<div class="loading-overlay" id="loading-overlay">
+    <div class="spinner"></div>
+</div>
+
+<header>
+    <div class="filters">
+        <label for="project-filter">Projet:</label>
+        <select id="project-filter">
+            <option value="">Tous les projets</option>
+            </select>
+
+        <label for="status-filter">Statut:</label>
+        <select id="status-filter">
+            <option value="">Tous</option>
+            <option value="pending">En attente</option>
+            <option value="processing">En cours</option>
+            <option value="done">Terminé</option>
+            <option value="error">Erreur</option>
+        </select>
+        <input type="text" id="search-input" placeholder="Rechercher...">
+    </div>
+    <div style="display:flex;align-items:center;gap:1rem;">
+        <div id="current-time"></div>
+        <div id="worker-status-container" style="display:flex; gap: 0.5rem; align-items: center;"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.5rem;">
+        <button id="open-upload-modal-btn" class="btn btn-warning">Upload Audio</button>
+        <button id="manage-projects-btn" class="btn btn-primary">Gérer les Projets</button>
+        
+        <button id="export-btn" class="btn btn-success">Exporter</button>
+    </div>
+</header>
+
+<h2>Monitoring des Workers</h2>
+<div class="grid-container">
+    <table class="grid-table worker-monitoring-table">
+        <thead>
+            <tr>
+                <th class="col-instance">Instance</th>
+                <th class="col-status">Statut</th>
+                <th class="col-charge-num">Charge (Nb)</th>
+                <th class="col-charge-bar">Charge %</th>
+                <th class="col-cpu-num">CPU %</th>
+                <th class="col-cpu-bar">CPU</th>
+                <th class="col-ram-num">RAM %</th>
+                <th class="col-ram-bar">RAM</th>
+                <th class="col-uptime">Uptime</th>
+                <th class="col-jobs">Tâches (total)</th>
+                <th class="col-audio">Tps Audio Traité</th>
+            </tr>
+        </thead>
+        <tbody id="worker-monitoring-grid">
+            </tbody>
+    </table>
+</div>
+
+<h2>Transcriptions</h2>
+<div class="grid-container">
+    <table class="grid-table">
+        <thead>
+            <tr>
+                <th class="col-status">Statut</th>
+                <th class="col-project">Projet</th>
+                <th class="col-id">ID</th>
+                <th class="col-instance">Instance</th>
+                <th class="col-lang">Langue</th>
+                <th class="col-duree">Durée Audio</th>
+                <th class="col-process">Tps. Trait.</th>
+                <th class="col-date">Créé le</th>
+                <th class="col-actions">Actions</th>
+            </tr>
+        </thead>
+        <tbody id="grid-table-body">
+            </tbody>
+    </table>
+</div>
+
+<div class="pagination" id="pagination"></div>
+
+<div id="modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <div id="modal-body"></div>
+    </div>
+</div>
+
+<div id="upload-modal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <span class="close" id="upload-modal-close">&times;</span>
+        <h2>Nouvelle Transcription</h2>
+        
+        <div class="form-group">
+            <label for="upload-project-select">Projet de destination :</label>
+            <select id="upload-project-select">
+                </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="upload-api-key-input">Clé d'API du projet sélectionné :</label>
+            <input type="password" id="upload-api-key-input" placeholder="Collez la clé API (vk_...) ici">
+            <small>Note: Pour le projet 'default_internal', la clé est injectée automatiquement.</small>
+        </div>
+
+        <div class="form-group">
+            <label for="upload-file-input">Fichier audio :</label>
+            <input type="file" id="upload-file-input" accept="audio/*">
+        </div>
+        
+        <div class="form-group">
+            <input type="checkbox" id="upload-use-vad" checked>
+            <label for="upload-use-vad" style="display: inline-block; font-weight: normal;">Utiliser la détection de voix (VAD)</label>
+        </div>
+        
+        <button id="upload-submit-btn" class="btn btn-success" style="width: 100%; padding: 0.8rem; font-size: 1rem;">Lancer la transcription</button>
+    </div>
+</div>
+
+<div id="projects-modal" class="modal">
+    <div class="modal-content" style="max-width: 700px;">
+        <span class="close" id="projects-modal-close">&times;</span>
+        <h2>Gestion des Projets</h2>
+        
+        <div class="form-group-inline">
+            <input type="text" id="new-project-name-input" placeholder="Nom du nouveau projet">
+            <button id="create-project-btn" class="btn btn-primary">Créer</button>
+        </div>
+        
+        <table class="grid-table" style="margin-top: 1rem;">
+            <thead>
+                <tr>
+                    <th>Projet</th>
+                    <th>Clé d'API (X-API-Key)</th>
+                    <th>Créé le</th>
+                </tr>
+            </thead>
+            <tbody id="projects-table-body">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+
+<script>
+    window.VOCALYX_CONFIG = {
+        DEFAULT_PROJECT_NAME: "{{ DEFAULT_PROJECT_NAME|e }}",
+        DEFAULT_PROJECT_KEY: "{{ DEFAULT_PROJECT_KEY|e }}"
+    };
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/toastr@2.1.4/build/toastr.min.js"></script>
+<script src="/static/js/utils.js"></script>
+<script src="/static/js/modal.js"></script>
+<script src="/static/js/cards.js"></script>
+<script src="/static/js/polling.js"></script>
+<script src="/static/js/events.js"></script>
+<script src="/static/js/main.js"></script>
+</body>
+</html>
