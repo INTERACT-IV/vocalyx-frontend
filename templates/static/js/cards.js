@@ -1,8 +1,8 @@
-// cards.js
-// Gestion de la grille de transcription
+// templates/static/js/cards.js
+// Gestion de la grille de transcription (adapté pour utiliser api.js)
 
 let currentPage = 1;
-let currentLimit = 25; // Limite par défaut
+let currentLimit = 25;
 
 /**
  * Attache les événements de clic sur les lignes pour ouvrir la modale
@@ -23,11 +23,10 @@ function attachRowClickEvents() {
                     <p>Chargement des détails...</p>
                 </div>
             `;
+            
             try {
-                // Cet appel est simple et correct
-                const resp = await fetch(`/api/transcribe/${id}`);
-                if (!resp.ok) throw new Error(`Erreur: ${resp.status}`);
-                const data = await resp.json();
+                // ✅ Utilisation de l'API client
+                const data = await api.getTranscription(id);
                 renderTranscriptionModal(data);
             } catch (err) {
                 modalBody.innerHTML = `
@@ -50,14 +49,15 @@ function attachDeleteEvents() {
             e.stopPropagation(); // Empêche le clic de se propager à la ligne
             const row = e.target.closest("tr");
             const id = row.dataset.id;
+            
             if (!confirm(`Supprimer la transcription ${id.substring(0, 8)}... ?`)) return;
             
             try {
-                // Cet appel est simple et correct
-                const resp = await fetch(`/api/transcribe/${id}`, { method: "DELETE" });
-                if (!resp.ok) throw new Error(await resp.text());
+                // ✅ Utilisation de l'API client
+                await api.deleteTranscription(id);
                 showToast(`Transcription supprimée !`, "success");
                 
+                // Animation de suppression
                 row.style.transition = "opacity 0.3s, transform 0.3s";
                 row.style.opacity = "0";
                 row.style.transform = "scale(0.95)";
@@ -75,54 +75,47 @@ function attachDeleteEvents() {
 /**
  * Rafraîchit la grille avec les données
  */
-async function refreshCards(page=1, limit=currentLimit) {
-    const status = document.getElementById("status-filter").value;
-    const search = document.getElementById("search-input").value;
-    const project = document.getElementById("project-filter").value;
+async function refreshCards(page = 1, limit = currentLimit) {
+    const status = document.getElementById("status-filter")?.value || null;
+    const search = document.getElementById("search-input")?.value || null;
+    const project = document.getElementById("project-filter")?.value || null;
     
     currentPage = page;
     currentLimit = limit;
     
     try {
-        // ❗️ CORRECTION : Utilisation de URLSearchParams pour construire l'URL
-        const recentParams = new URLSearchParams({
-            limit: limit,
-            page: page
-        });
-        if (status) recentParams.append('status', status);
-        if (search) recentParams.append('search', search);
-        if (project) recentParams.append('project', project);
-
-        const url = `/api/transcribe/recent?${recentParams.toString()}`;
+        // Préparer les filtres
+        const filters = {};
+        if (status) filters.status = status;
+        if (search) filters.search = search;
+        if (project) filters.project = project;
         
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
-        const entries = await resp.json();
+        // ✅ Utilisation de l'API client pour récupérer les transcriptions
+        const entries = await api.getTranscriptions(page, limit, filters);
         
-        // ❗️ CORRECTION : Utilisation de URLSearchParams pour l'URL de comptage
-        const countParams = new URLSearchParams();
-        if (status) countParams.append('status', status);
-        if (search) countParams.append('search', search);
-        if (project) countParams.append('project', project);
-
-        const countUrl = `/api/transcribe/count?${countParams.toString()}`;
-        
-        const countResp = await fetch(countUrl);
-        const countData = await countResp.json();
+        // ✅ Utilisation de l'API client pour récupérer le compte
+        const countData = await api.countTranscriptions(filters);
         
         const totalPages = Math.ceil(countData.total_filtered / limit);
         
         const container = document.getElementById("grid-table-body");
+        if (!container) return;
+        
         container.innerHTML = "";
         
         if (entries.length === 0) {
-            container.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;">Aucune transcription trouvée.</td></tr>`;
+            container.innerHTML = `
+                <tr><td colspan="9" style="text-align:center;padding:2rem;">
+                    Aucune transcription trouvée.
+                </td></tr>
+            `;
             updatePagination(page, 0);
             return;
         }
         
         const fragment = document.createDocumentFragment();
-        entries.forEach((entry, i) => {
+        
+        entries.forEach((entry) => {
             const row = document.createElement("tr");
             row.className = `status-${entry.status || 'unknown'}`;
             row.dataset.id = entry.id;
@@ -154,13 +147,25 @@ async function refreshCards(page=1, limit=currentLimit) {
         
     } catch (err) {
         console.error("Erreur:", err);
-        document.getElementById("grid-table-body").innerHTML =
-            `<tr><td colspan="9" style="color:red;text-align:center;padding:2rem;">Erreur de chargement. Veuillez réessayer.</td></tr>`;
+        const container = document.getElementById("grid-table-body");
+        if (container) {
+            container.innerHTML = `
+                <tr><td colspan="9" style="color:red;text-align:center;padding:2rem;">
+                    Erreur de chargement: ${err.message}<br>
+                    <small>Vérifiez que vocalyx-api est accessible.</small>
+                </td></tr>
+            `;
+        }
     }
 }
 
+/**
+ * Met à jour la pagination
+ */
 function updatePagination(currentPage, totalPages) {
     const pagination = document.getElementById("pagination");
+    if (!pagination) return;
+    
     pagination.innerHTML = "";
     
     if (totalPages <= 1) return;
@@ -168,21 +173,27 @@ function updatePagination(currentPage, totalPages) {
     let startPage = Math.max(1, currentPage - 2);
     let endPage = Math.min(totalPages, currentPage + 2);
 
+    // Bouton première page et page précédente
     if (currentPage > 1) {
         pagination.appendChild(createPageButton(1, "«"));
         pagination.appendChild(createPageButton(currentPage - 1, "‹"));
     }
 
+    // Pages numérotées
     for (let i = startPage; i <= endPage; i++) {
         pagination.appendChild(createPageButton(i, i, currentPage === i));
     }
 
+    // Bouton page suivante et dernière page
     if (currentPage < totalPages) {
         pagination.appendChild(createPageButton(currentPage + 1, "›"));
         pagination.appendChild(createPageButton(totalPages, "»"));
     }
 }
 
+/**
+ * Crée un bouton de pagination
+ */
 function createPageButton(page, text, isActive = false) {
     const btn = document.createElement("button");
     btn.textContent = text;

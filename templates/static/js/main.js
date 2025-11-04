@@ -1,5 +1,5 @@
-// main.js
-// Point d'entrée principal de l'application
+// templates/static/js/main.js
+// Point d'entrée principal de l'application (adapté pour l'architecture API)
 
 /**
  * Récupère tous les projets et remplit les listes <select>
@@ -8,30 +8,20 @@ async function populateProjectFilters() {
     const filterSelect = document.getElementById("project-filter");
     const uploadSelect = document.getElementById("upload-project-select");
     
-    // Utilise la clé admin (du projet technique) pour lister les projets
-    const adminKey = window.VOCALYX_CONFIG.DEFAULT_PROJECT_KEY;
-    if (!adminKey || adminKey === "erreur_cle") {
-        console.error("Clé admin non chargée. Impossible de lister les projets.");
-        showToast("Erreur: Clé Admin non chargée", "error");
+    // Utilise la clé admin stockée (sera demandée à l'utilisateur)
+    const adminKey = window.VOCALYX_CONFIG?.DEFAULT_PROJECT_KEY;
+    if (!adminKey) {
+        console.error("Clé admin non disponible");
+        showToast("Erreur: Configuration admin manquante", "error");
         return;
     }
 
     try {
-        const resp = await fetch("/api/projects", {
-            headers: { 'X-API-Key': adminKey }
-        });
-        
-        if (!resp.ok) {
-             let errorMsg = await resp.text();
-             try { errorMsg = JSON.parse(errorMsg).detail; } catch(e) {}
-             throw new Error(errorMsg);
-        }
-        
-        const projects = await resp.json();
+        const projects = await api.listProjects(adminKey);
         
         // Vider les listes (sauf la première option)
         filterSelect.innerHTML = '<option value="">Tous les projets</option>';
-        uploadSelect.innerHTML = ''; // Vider complètement
+        uploadSelect.innerHTML = '';
 
         projects.forEach(project => {
             // Ajouter au filtre du header
@@ -45,8 +35,8 @@ async function populateProjectFilters() {
             uploadOption.value = project.name;
             uploadOption.textContent = project.name;
             
-            // Auto-sélectionner le projet 'default_internal'
-            if (project.name === window.VOCALYX_CONFIG.DEFAULT_PROJECT_NAME) {
+            // Auto-sélectionner le projet admin
+            if (project.name === window.VOCALYX_CONFIG?.DEFAULT_PROJECT_NAME) {
                 uploadOption.selected = true;
             }
             uploadSelect.appendChild(uploadOption);
@@ -60,7 +50,6 @@ async function populateProjectFilters() {
         showToast(`Erreur chargement projets: ${err.message}`, "error");
     }
 }
-
 
 /**
  * Formate une durée en secondes en H:M:S
@@ -82,116 +71,236 @@ function formatDuration(seconds) {
 }
 
 /**
- * Met à jour le statut des workers (Grid)
+ * Met à jour le statut des workers (depuis l'API)
  */
 async function updateWorkerStatus() {
-    const gridContainer = document.getElementById("worker-monitoring-grid");
     const headerContainer = document.getElementById("worker-status-container");
-    if (!gridContainer || !headerContainer) return;
+    if (!headerContainer) return;
 
     try {
-        const resp = await fetch("/api/monitoring/status");
-        if (!resp.ok) throw new Error("Network response was not ok");
-        const workers = await resp.json();
-
-        let totalActive = 0;
-        let totalMax = 0;
-        let offline = 0;
+        const stats = await api.getWorkersStatus();
         
-        gridContainer.innerHTML = ""; // Vider la grille
-
-        if (workers.length === 0) {
-            gridContainer.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:1rem;">Aucun worker configuré ou trouvé.</td></tr>`;
-        }
-
-        workers.forEach(w => {
-            if (w.status === "offline") {
-                offline++;
-            } else {
-                totalActive += w.active_tasks;
-                totalMax += w.max_workers;
-            }
-            
-            const row = document.createElement("tr");
-            row.className = `status-${w.status}`;
-            
-            let rowHtml = "";
-            if (w.status !== "offline") {
-                const uptime = w.uptime_seconds ? formatDuration(w.uptime_seconds) : 'N/A';
-                const audioTime = w.total_audio_processed_s ? formatDuration(w.total_audio_processed_s) : '0s';
-                
-                rowHtml = `
-                    <td class="col-instance"><strong>${escapeHtml(w.instance_name)}</strong><br><small>${escapeHtml(w.machine_name)}</small></td>
-                    <td class="col-status">
-                        <span class="status-indicator"></span>
-                        <span class="status-text">${escapeHtml(w.status)}</span>
-                    </td>
-                    <td class="col-charge-num">
-                        <span class="bar-chart-text">${w.active_tasks} / ${w.max_workers}</span>
-                    </td>
-                    <td class="col-charge-bar">
-                        <span class="bar-chart-text">${w.usage_percent}%</span>
-                        <div class="progress-bar small">
-                            <div class="progress-bar-inner ${w.usage_percent > 80 ? 'high-usage' : ''}" style="width: ${w.usage_percent}%;">
-                            </div>
-                        </div>
-                    </td>
-                    <td class="col-cpu-num">
-                        <span class="bar-chart-text">${w.cpu_usage_percent}%</span>
-                    </td>
-                    <td class="col-cpu-bar">
-                        <div class="progress-bar small">
-                            <div class="progress-bar-inner ${w.cpu_usage_percent > 80 ? 'high-usage' : ''}" style="width: ${w.cpu_usage_percent}%;">
-                            </div>
-                        </div>
-                    </td>
-                    <td class="col-ram-num">
-                        <span class="bar-chart-text">${w.memory_usage_percent}%</span>
-                    </td>
-                    <td class="col-ram-bar">
-                        <div class="progress-bar small">
-                            <div class="progress-bar-inner ${w.memory_usage_percent > 80 ? 'high-usage' : ''}" style="width: ${w.memory_usage_percent}%;">
-                            </div>
-                        </div>
-                    </td>
-                    <td class="col-uptime">${uptime}</td>
-                    <td class="col-jobs">${w.total_jobs_completed}</td>
-                    <td class="col-audio">${audioTime}</td>
-                `;
-            } else {
-                rowHtml = `
-                    <td class="col-instance"><strong>${escapeHtml(w.instance_name)}</strong></td>
-                    <td class="col-status">
-                        <span class="status-indicator"></span>
-                        <span class="status-text">Offline</span>
-                    </td>
-                    <td colspan="9" style="color:var(--danger);font-size:0.9rem;">
-                        Erreur : ${escapeHtml(w.error)}
-                    </td>
-                `;
-            }
-
-            row.innerHTML = rowHtml;
-            gridContainer.appendChild(row);
-        });
-
-        // Mettre à jour le statut global dans le header
+        const workerCount = stats.worker_count || 0;
+        const activeTasks = stats.active_tasks || 0;
+        
         let statusClass = "status-ok";
-        if (offline > 0) statusClass = "status-error";
-        else if (totalActive === totalMax && totalMax > 0) statusClass = "status-busy";
+        if (workerCount === 0) {
+            statusClass = "status-error";
+        } else if (activeTasks > 0) {
+            statusClass = "status-busy";
+        }
 
         headerContainer.innerHTML = `
             <span class="worker-status-light ${statusClass}"></span>
-            <span style="font-weight:600;">Workers: ${totalActive} / ${totalMax}</span>
-            ${offline > 0 ? `<span style="color:#dc3545;font-weight:600;">(${offline} offline)</span>` : ''}
+            <span style="font-weight:600;">Workers: ${activeTasks} actifs (${workerCount} total)</span>
+            ${stats.error ? `<span style="color:#dc3545;font-weight:600;">(Erreur: ${stats.error})</span>` : ''}
         `;
 
     } catch (err) {
         console.error("Failed to fetch worker status:", err);
-        headerContainer.innerHTML = `<span class="worker-status-light status-error"></span> <span style="font-weight:600;">Workers: Error</span>`;
-        gridContainer.innerHTML = `<tr><td colspan="11" style="color:red;text-align:center;padding:1rem;">Erreur lors du chargement des workers.</td></tr>`;
+        headerContainer.innerHTML = `
+            <span class="worker-status-light status-error"></span>
+            <span style="font-weight:600;">Workers: Indisponible</span>
+        `;
     }
 }
+
+/**
+ * Rafraîchit la grille des transcriptions
+ */
+async function refreshTranscriptions(page = 1, limit = 25) {
+    const status = document.getElementById("status-filter")?.value || null;
+    const search = document.getElementById("search-input")?.value || null;
+    const project = document.getElementById("project-filter")?.value || null;
+    
+    currentPage = page;
+    currentLimit = limit;
+    
+    try {
+        const filters = {};
+        if (status) filters.status = status;
+        if (search) filters.search = search;
+        if (project) filters.project = project;
+        
+        // Récupérer les transcriptions
+        const transcriptions = await api.getTranscriptions(page, limit, filters);
+        
+        // Récupérer le compte pour la pagination
+        const countData = await api.countTranscriptions(filters);
+        const totalPages = Math.ceil(countData.total_filtered / limit);
+        
+        // Afficher les résultats
+        renderTranscriptions(transcriptions);
+        updatePagination(page, totalPages);
+        
+    } catch (err) {
+        console.error("Erreur:", err);
+        const container = document.getElementById("grid-table-body");
+        if (container) {
+            container.innerHTML = `
+                <tr><td colspan="9" style="color:red;text-align:center;padding:2rem;">
+                    Erreur de chargement: ${err.message}
+                </td></tr>
+            `;
+        }
+    }
+}
+
+/**
+ * Affiche les transcriptions dans la grille
+ */
+function renderTranscriptions(transcriptions) {
+    const container = document.getElementById("grid-table-body");
+    if (!container) return;
+    
+    container.innerHTML = "";
+    
+    if (transcriptions.length === 0) {
+        container.innerHTML = `
+            <tr><td colspan="9" style="text-align:center;padding:2rem;">
+                Aucune transcription trouvée.
+            </td></tr>
+        `;
+        return;
+    }
+    
+    const fragment = document.createDocumentFragment();
+    
+    transcriptions.forEach((entry) => {
+        const row = document.createElement("tr");
+        row.className = `status-${entry.status || 'unknown'}`;
+        row.dataset.id = entry.id;
+        
+        row.innerHTML = `
+            <td class="col-status">
+                <span class="status-indicator"></span>
+                <span class="status-text">${escapeHtml(entry.status || '-')}</span>
+            </td>
+            <td class="col-project">${escapeHtml(entry.project_name || 'N/A')}</td>
+            <td class="col-id">${escapeHtml(entry.id)}</td>
+            <td class="col-instance">${escapeHtml(entry.worker_id || 'N/A')}</td>
+            <td class="col-lang">${escapeHtml(entry.language || '...')}</td>
+            <td class="col-duree">${entry.duration ? entry.duration.toFixed(1) + 's' : '-'}</td>
+            <td class="col-process">${entry.processing_time ? entry.processing_time.toFixed(1) + 's' : '-'}</td>
+            <td class="col-date">${formatHumanDate(entry.created_at)}</td>
+            <td class="col-actions">
+                <button class="btn-delete btn btn-danger">Supprimer</button>
+            </td>
+        `;
+        
+        fragment.appendChild(row);
+    });
+    
+    container.appendChild(fragment);
+    attachRowClickEvents();
+    attachDeleteEvents();
+}
+
+/**
+ * Met à jour la pagination
+ */
+function updatePagination(currentPage, totalPages) {
+    const pagination = document.getElementById("pagination");
+    if (!pagination) return;
+    
+    pagination.innerHTML = "";
+    
+    if (totalPages <= 1) return;
+    
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, currentPage + 2);
+
+    if (currentPage > 1) {
+        pagination.appendChild(createPageButton(1, "«"));
+        pagination.appendChild(createPageButton(currentPage - 1, "‹"));
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        pagination.appendChild(createPageButton(i, i, currentPage === i));
+    }
+
+    if (currentPage < totalPages) {
+        pagination.appendChild(createPageButton(currentPage + 1, "›"));
+        pagination.appendChild(createPageButton(totalPages, "»"));
+    }
+}
+
+function createPageButton(page, text, isActive = false) {
+    const btn = document.createElement("button");
+    btn.textContent = text;
+    btn.dataset.page = page;
+    if (isActive) btn.classList.add("active");
+    btn.addEventListener("click", () => {
+        refreshTranscriptions(page, currentLimit);
+    });
+    return btn;
+}
+
+/**
+ * Attache les événements de clic sur les lignes
+ */
+function attachRowClickEvents() {
+    document.querySelectorAll("#grid-table-body tr").forEach(row => {
+        row.addEventListener("click", async (e) => {
+            if (e.target.closest(".btn-delete")) return;
+            
+            const id = row.dataset.id;
+            openModal();
+            modalBody.innerHTML = `
+                <div style="text-align:center;padding:2rem;">
+                    <div class="spinner"></div>
+                    <p>Chargement des détails...</p>
+                </div>
+            `;
+            
+            try {
+                const data = await api.getTranscription(id);
+                renderTranscriptionModal(data);
+            } catch (err) {
+                modalBody.innerHTML = `
+                    <div style="text-align:center;padding:2rem;color:red;">
+                        <p>❌ Erreur: ${err.message}</p>
+                        <button onclick="closeModal()" class="btn btn-danger">Fermer</button>
+                    </div>
+                `;
+            }
+        });
+    });
+}
+
+/**
+ * Attache les événements de suppression
+ */
+function attachDeleteEvents() {
+    document.querySelectorAll(".btn-delete").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+            e.stopPropagation();
+            const row = e.target.closest("tr");
+            const id = row.dataset.id;
+            
+            if (!confirm(`Supprimer la transcription ${id.substring(0, 8)}... ?`)) return;
+            
+            try {
+                await api.deleteTranscription(id);
+                showToast(`Transcription supprimée !`, "success");
+                
+                row.style.transition = "opacity 0.3s, transform 0.3s";
+                row.style.opacity = "0";
+                row.style.transform = "scale(0.95)";
+                
+                setTimeout(() => {
+                    refreshTranscriptions(currentPage, currentLimit);
+                }, 300);
+            } catch (err) {
+                showToast(`Erreur: ${err.message}`, "error");
+            }
+        });
+    });
+}
+
+// Variables globales
+let currentPage = 1;
+let currentLimit = 25;
 
 // Initialisation au chargement de la page
 document.addEventListener('DOMContentLoaded', () => {
@@ -200,15 +309,15 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCurrentTime();
     
     // Démarrer le monitoring des workers
-    setInterval(updateWorkerStatus, 5000); // toutes les 5 secondes
+    setInterval(updateWorkerStatus, 5000);
     updateWorkerStatus();
 
     // Charger la liste des projets
     populateProjectFilters();
 
-    // Charger les cartes initiales (grille de transcriptions)
-    refreshCards(1, 25); // Limite par défaut à 25
+    // Charger les transcriptions initiales
+    refreshTranscriptions(1, 25);
     
-    // Démarrer le polling des cartes (grille de transcriptions)
+    // Démarrer le polling des transcriptions
     startPolling();
 });

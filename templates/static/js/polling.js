@@ -1,8 +1,11 @@
-// polling.js
-// Gestion du polling intelligent
+// templates/static/js/polling.js
+// Gestion du polling intelligent (adapté pour utiliser api.js)
 
 let pollingInterval = null;
 
+/**
+ * Démarre le polling des transcriptions
+ */
 function startPolling() {
     if (pollingInterval) clearInterval(pollingInterval);
     
@@ -12,37 +15,33 @@ function startPolling() {
         const isModalOpen = Array.from(modals).some(m => m.style.display === "block");
         if (isModalOpen) return;
         
-        // Rafraîchir sans animation pour le polling
-        const status = document.getElementById("status-filter").value;
-        const search = document.getElementById("search-input").value;
-        const project = document.getElementById("project-filter").value;
+        // Récupérer les filtres actuels
+        const status = document.getElementById("status-filter")?.value || null;
+        const search = document.getElementById("search-input")?.value || null;
+        const project = document.getElementById("project-filter")?.value || null;
         
         try {
-            // ❗️ CORRECTION : Utilisation de URLSearchParams pour construire l'URL
-            const recentParams = new URLSearchParams({
-                limit: currentLimit,
-                page: currentPage
-            });
-            if (status) recentParams.append('status', status);
-            if (search) recentParams.append('search', search);
-            if (project) recentParams.append('project', project);
-
-            const url = `/api/transcribe/recent?${recentParams.toString()}`;
+            // Préparer les filtres
+            const filters = {};
+            if (status) filters.status = status;
+            if (search) filters.search = search;
+            if (project) filters.project = project;
             
-            const resp = await fetch(url);
-            if (!resp.ok) return;
-            const entries = await resp.json();
+            // ✅ Utilisation de l'API client
+            const entries = await api.getTranscriptions(currentPage, currentLimit, filters);
             
             const container = document.getElementById("grid-table-body");
-            if (!container) return; 
+            if (!container) return;
 
+            // Récupérer les IDs actuellement affichés
             const existingIds = new Set(
-                Array.from(container.querySelectorAll('tr[data-id]')).map(c => c.dataset.id)
+                Array.from(container.querySelectorAll('tr[data-id]')).map(row => row.dataset.id)
             );
             
+            // Récupérer les IDs de la réponse API
             const newIds = new Set(entries.map(e => e.id));
             
-            // Vérifier si les ID à l'écran correspondent aux ID de l'API
+            // Vérifier si les ID ont changé (ajout/suppression)
             let hasChanges = existingIds.size !== newIds.size || 
                              ![...existingIds].every(id => newIds.has(id));
             
@@ -52,12 +51,13 @@ function startPolling() {
             } else {
                 // Si les ID sont les mêmes, vérifier si les statuts ont changé
                 let statusChanged = false;
+                
                 entries.forEach(entry => {
                     const row = container.querySelector(`tr[data-id="${entry.id}"]`);
                     if (row) {
                         const statusTextEl = row.querySelector('.status-text');
                         if (statusTextEl && statusTextEl.textContent !== entry.status) {
-                            console.log(`🔄 Changement de statut détecté pour ${entry.id}`);
+                            console.log(`🔄 Changement de statut détecté pour ${entry.id}: ${statusTextEl.textContent} → ${entry.status}`);
                             statusChanged = true;
                         }
                     }
@@ -69,22 +69,46 @@ function startPolling() {
             }
         } catch (err) {
             console.error('Erreur polling:', err);
+            // En cas d'erreur, ne pas arrêter le polling
+            // L'erreur sera visible dans la console mais n'empêchera pas les prochaines tentatives
         }
     }, 5000); // Polling toutes les 5 secondes
+    
+    console.log('✅ Polling démarré (intervalle: 5s)');
 }
 
+/**
+ * Arrête le polling
+ */
 function stopPolling() {
     if (pollingInterval) {
         clearInterval(pollingInterval);
         pollingInterval = null;
+        console.log('⏸️ Polling arrêté');
     }
 }
 
-// Arrêter le polling quand la page est cachée
+/**
+ * Redémarre le polling
+ */
+function restartPolling() {
+    stopPolling();
+    startPolling();
+    console.log('🔄 Polling redémarré');
+}
+
+// Arrêter le polling quand la page est cachée (économie de ressources)
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
+        console.log('👁️ Page cachée, arrêt du polling');
         stopPolling();
     } else {
+        console.log('👁️ Page visible, redémarrage du polling');
         startPolling();
     }
+});
+
+// Arrêter le polling avant de quitter la page
+window.addEventListener('beforeunload', () => {
+    stopPolling();
 });
