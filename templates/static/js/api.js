@@ -35,17 +35,17 @@ class VocalyxDashboardAPI {
     // ========================================================================
     
     async listProjects(adminKey) {
-        const formData = new FormData();
-        formData.append('admin_key', adminKey);
+        const params = new URLSearchParams({ admin_key: adminKey });
         
-        const response = await fetch(`${this.baseURL}/api/projects`, {
-            method: 'GET',
-            body: formData
+        const response = await fetch(`${this.baseURL}/api/projects?${params}`, {
+            method: 'GET'
+            // Pas de body !
         });
         return this._handleResponse(response);
     }
     
     async createProject(projectName, adminKey) {
+        // POST est correct, il garde le body
         const formData = new FormData();
         formData.append('project_name', projectName);
         formData.append('admin_key', adminKey);
@@ -58,12 +58,11 @@ class VocalyxDashboardAPI {
     }
     
     async getProjectDetails(projectName, adminKey) {
-        const formData = new FormData();
-        formData.append('admin_key', adminKey);
+        const params = new URLSearchParams({ admin_key: adminKey });
         
-        const response = await fetch(`${this.baseURL}/api/projects/${projectName}`, {
-            method: 'GET',
-            body: formData
+        const response = await fetch(`${this.baseURL}/api/projects/${projectName}?${params}`, {
+            method: 'GET'
+            // Pas de body !
         });
         return this._handleResponse(response);
     }

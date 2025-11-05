@@ -55,12 +55,21 @@ class Config:
         """Charge les paramètres dans des attributs"""
         
         # API
-        self.api_url = self.config.get('API', 'url')
+        self.api_url = os.environ.get(
+            'VOCALYX_API_URL', 
+            self.config.get('API', 'url')
+        )
         self.api_timeout = self.config.getint('API', 'timeout', fallback=30)
         
         # SECURITY
-        self.internal_api_key = self.config.get('SECURITY', 'internal_api_key')
-        self.admin_project_name = self.config.get('SECURITY', 'admin_project_name')
+        self.internal_api_key = os.environ.get(
+            'INTERNAL_API_KEY', 
+            self.config.get('SECURITY', 'internal_api_key')
+        )
+        self.admin_project_name = os.environ.get(
+            'ADMIN_PROJECT_NAME', 
+            self.config.get('SECURITY', 'admin_project_name')
+        )
         
         if self.internal_api_key == 'CHANGE_ME_SECRET_INTERNAL_KEY_12345':
             logging.warning("⚠️ SECURITY: Internal API key is using default value. Please change it!")
@@ -69,10 +78,18 @@ class Config:
         self.templates_dir = self.config.get('PATHS', 'templates_dir')
         
         # LOGGING
-        self.log_level = self.config.get('LOGGING', 'level', fallback='INFO')
+        self.log_level = os.environ.get(
+            'LOG_LEVEL', 
+            self.config.get('LOGGING', 'level', fallback='INFO')
+        )
         self.log_file_enabled = self.config.getboolean('LOGGING', 'file_enabled', fallback=True)
         self.log_file_path = self.config.get('LOGGING', 'file_path', fallback='logs/vocalyx-frontend.log')
-        self.log_colored = self.config.getboolean('LOGGING', 'colored', fallback=True)
+        
+        log_colored_str = os.environ.get(
+            'LOG_COLORED', 
+            self.config.get('LOGGING', 'colored', fallback='true')
+        )
+        self.log_colored = log_colored_str.lower() in ['true', '1', 't']
     
     def reload(self):
         """Recharge la configuration depuis le fichier"""

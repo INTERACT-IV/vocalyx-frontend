@@ -4,7 +4,7 @@ Routes du Dashboard (adaptées pour utiliser l'API client)
 """
 
 import logging
-from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException
+from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException, Query
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
@@ -35,7 +35,7 @@ async def dashboard_page(request: Request):
 # ============================================================================
 
 @dashboard_router.get("/api/projects", tags=["Projects"])
-async def list_projects(request: Request, admin_key: str = Form(...)):
+async def list_projects(request: Request, admin_key: str = Query(...)):
     """Liste tous les projets (proxy vers l'API)"""
     api_client: VocalyxAPIClient = request.app.state.api_client
     
@@ -66,7 +66,7 @@ async def create_project(
 async def get_project_details(
     request: Request,
     project_name: str,
-    admin_key: str = Form(...)
+    admin_key: str = Query(...)
 ):
     """Récupère les détails d'un projet (proxy vers l'API)"""
     api_client: VocalyxAPIClient = request.app.state.api_client

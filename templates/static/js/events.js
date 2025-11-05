@@ -71,13 +71,24 @@ const projectsModal = document.getElementById("projects-modal");
 const projectsModalClose = document.getElementById("projects-modal-close");
 
 document.getElementById("manage-projects-btn").addEventListener("click", () => {
-    const adminKey = window.VOCALYX_CONFIG?.DEFAULT_PROJECT_KEY;
-    
+    let adminKey = window.VOCALYX_CONFIG?.DEFAULT_PROJECT_KEY;
+
+    // Si la clé n'est pas déjà chargée dans la session
     if (!adminKey) {
-        showToast("Erreur: Clé Admin non chargée", "error");
-        return;
+        // Demander la clé à l'utilisateur
+        adminKey = prompt("Veuillez entrer la Clé API Admin (affichée dans les logs de 'make install'):");
+
+        if (!adminKey || !adminKey.startsWith("vk_")) {
+            showToast("Clé Admin invalide ou annulée.", "warning");
+            return;
+        }
+
+        // Stocker la clé dans la variable globale pour cette session
+        window.VOCALYX_CONFIG.DEFAULT_PROJECT_KEY = adminKey;
+        showToast("Clé Admin chargée pour la session.", "success");
     }
-    
+
+    // Maintenant, la clé existe, on peut ouvrir la modale
     projectsModal.style.display = "block";
     loadProjectsTable();
 });

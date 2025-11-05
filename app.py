@@ -97,7 +97,8 @@ async def root(request: Request):
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "api_url": config.api_url,
-        "admin_project_name": config.admin_project_name
+        "DEFAULT_PROJECT_NAME": config.admin_project_name,
+        "DEFAULT_PROJECT_KEY": ""
     })
 
 @app.get("/health", tags=["System"])
