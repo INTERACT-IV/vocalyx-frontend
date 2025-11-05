@@ -1,4 +1,4 @@
-# vocalyx-dashboard
+# vocalyx-frontend
 
 Interface web pour la gestion des transcriptions audio Vocalyx.
 
@@ -12,7 +12,7 @@ Interface web pour la gestion des transcriptions audio Vocalyx.
 ## 🏗️ Architecture
 
 ```
-vocalyx-dashboard/
+vocalyx-frontend/
 ├── templates/
 │   ├── dashboard.html
 │   └── static/
@@ -48,7 +48,7 @@ vocalyx-dashboard/
 ```bash
 # Cloner le dépôt
 git clone <repository>
-cd vocalyx-dashboard
+cd vocalyx-frontend
 
 # Créer un environnement virtuel
 python3.10 -m venv venv
@@ -61,7 +61,7 @@ pip install -r requirements.txt
 cp config.ini config.local.ini
 # Éditer config.local.ini avec l'URL de votre API
 
-# Lancer le dashboard
+# Lancer le frontend
 python app.py
 ```
 
@@ -71,12 +71,12 @@ Le Dashboard sera accessible sur http://localhost:8080
 
 ```bash
 # Build
-docker build -t vocalyx-dashboard .
+docker build -t vocalyx-frontend .
 
 # Run
 docker run -p 8080:8080 \
   -e VOCALYX_API_URL="http://vocalyx-api:8000" \
-  vocalyx-dashboard
+  vocalyx-frontend
 ```
 
 ## 📡 Fonctionnalités
@@ -103,7 +103,7 @@ docker run -p 8080:8080 \
 
 ### Communication avec l'API
 
-Le dashboard utilise une clé interne (`X-Internal-Key`) pour communiquer avec vocalyx-api.
+Le frontend utilise une clé interne (`X-Internal-Key`) pour communiquer avec vocalyx-api.
 
 ```ini
 [SECURITY]
@@ -114,9 +114,9 @@ internal_api_key = SECRET_KEY_HERE
 
 ### Flux d'Authentification
 
-1. **Upload** : Dashboard → API (avec clé projet de l'utilisateur)
-2. **Lecture** : Dashboard → API (avec clé interne)
-3. **Admin** : Dashboard → API (avec clé projet admin)
+1. **Upload** : Frontend → API (avec clé projet de l'utilisateur)
+2. **Lecture** : Frontend → API (avec clé interne)
+3. **Admin** : Frontend → API (avec clé projet admin)
 
 ## ⚙️ Configuration
 
@@ -131,7 +131,7 @@ INTERNAL_API_KEY=your_secret_key
 
 ## 📊 Monitoring
 
-- **Logs**: `logs/vocalyx-dashboard.log`
+- **Logs**: `logs/vocalyx-frontend.log`
 - **Health Check**: `GET /health`
 
 ## 🎨 Interface Utilisateur
