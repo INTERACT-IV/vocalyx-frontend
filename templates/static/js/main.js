@@ -113,16 +113,23 @@ async function updateWorkerStatus() {
  * Rafraîchit la grille des transcriptions
  */
 async function refreshTranscriptions(page = 1, limit = 25) {
-    console.log("🔄 refreshTranscriptions called:", { page, limit });
-    
     const status = document.getElementById("status-filter")?.value || null;
     const search = document.getElementById("search-input")?.value || null;
     const project = document.getElementById("project-filter")?.value || null;
     
-    console.log("📋 Filters:", { status, search, project });
-    
     currentPage = page;
     currentLimit = limit;
+    
+    // ✅ AJOUT : Afficher un indicateur de chargement
+    const container = document.getElementById("grid-table-body");
+    if (container) {
+        container.innerHTML = `
+            <tr><td colspan="9" style="text-align:center;padding:2rem;">
+                <div class="spinner"></div>
+                <p>Chargement des transcriptions...</p>
+            </td></tr>
+        `;
+    }
     
     try {
         const filters = {};
@@ -130,25 +137,19 @@ async function refreshTranscriptions(page = 1, limit = 25) {
         if (search) filters.search = search;
         if (project) filters.project = project;
         
-        console.log("⏳ Fetching transcriptions...");
-        const transcriptions = await api.getTranscriptions(page, limit, filters);
-        console.log("✅ Transcriptions received:", transcriptions.length, "items");
-        
-        console.log("⏳ Fetching count...");
-        const countData = await api.countTranscriptions(filters);
-        console.log("✅ Count received:", countData);
+        // Appels en parallèle
+        const [transcriptions, countData] = await Promise.all([
+            api.getTranscriptions(page, limit, filters),
+            api.countTranscriptions(filters)
+        ]);
         
         const totalPages = Math.ceil(countData.total_filtered / limit);
         
-        console.log("🎨 Rendering transcriptions...");
         renderTranscriptions(transcriptions);
-        console.log("🎨 Updating pagination...");
         updatePagination(page, totalPages);
-        console.log("✅ refreshTranscriptions complete");
         
     } catch (err) {
-        console.error("❌ Error in refreshTranscriptions:", err);
-        const container = document.getElementById("grid-table-body");
+        console.error("❌ Error:", err);
         if (container) {
             container.innerHTML = `
                 <tr><td colspan="9" style="color:red;text-align:center;padding:2rem;">
@@ -334,11 +335,6 @@ console.log("🚀 main.js loaded");
 // Initialisation au chargement de la page
 document.addEventListener('DOMContentLoaded', async () => {
     console.log("✅ DOMContentLoaded fired");
-    console.log("🔍 Checking if 'api' exists:", typeof api);
-    console.log("🔍 Checking dashboard elements:");
-    console.log("  - grid-table-body:", document.getElementById("grid-table-body"));
-    console.log("  - status-filter:", document.getElementById("status-filter"));
-    console.log("  - project-filter:", document.getElementById("project-filter"));
     
     // Démarrer la mise à jour de l'heure
     setInterval(updateCurrentTime, 1000);
@@ -348,13 +344,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     setInterval(updateWorkerStatus, 5000);
     updateWorkerStatus();
 
-    // Charger la liste des projets
-    console.log("📋 Loading projects...");
-    await populateProjectFilters();
-
-    // Charger les transcriptions
-    console.log("📊 Loading transcriptions...");
-    await refreshTranscriptions(1, 25);
+    // ✅ OPTIMISATION : Charger projets et transcriptions en parallèle
+    console.log("📋 Loading projects and transcriptions in parallel...");
+    await Promise.all([
+        populateProjectFilters(),
+        refreshTranscriptions(1, 25)
+    ]);
     
     // Démarrer le polling
     console.log("🔄 Starting polling...");
