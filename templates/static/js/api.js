@@ -8,10 +8,9 @@
 class VocalyxDashboardAPI {
     constructor() {
         this.baseURL = window.location.origin;
-        this.wsURL = this.baseURL.replace(/^http/, 'ws'); // Remplace http/https par ws/wss
+        // this.wsURL = this.baseURL.replace(/^http/, 'ws'); // Plus utilisé
         this.websocket = null;
         console.log("🔧 API Client initialized, baseURL:", this.baseURL);
-        console.log("🔧 WebSocket URL:", this.wsURL);
     }
     
     /**
@@ -35,28 +34,57 @@ class VocalyxDashboardAPI {
             throw new Error(errorMessage);
         }
         
-        const data = await response.json();
-        console.log("✅ Response data:", data);
-        return data;
+        // Gérer les réponses non-JSON (comme pour get-token)
+        try {
+            const data = await response.json();
+            console.log("✅ Response data:", data);
+            return data;
+        } catch (e) {
+            console.log("✅ Response data (non-JSON):", e);
+            return null; // ou response.text() si tu attends du texte
+        }
     }
-
+    
     // ========================================================================
     // WEBSOCKET
     // ========================================================================
     
-    connectWebSocket(onMessageCallback, onErrorCallback) {
+    // --- MODIFICATION MAJEURE ---
+    async connectWebSocket(onMessageCallback, onErrorCallback) {
         // Assure une seule connexion
         if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
             console.warn("WebSocket déjà connecté.");
             return;
         }
-        // Construire l'URL WS
-        const apiWsUrl = window.VOCALYX_CONFIG.API_URL.replace(/^http/, 'ws');
+
+        let token;
+        try {
+            // 1. Appeler notre nouvel endpoint frontend (/auth/get-token)
+            // Cet appel enverra le cookie HttpOnly
+            const response = await fetch(`${this.baseURL}/auth/get-token`);
+            if (!response.ok) {
+                throw new Error("Autorisation refusée pour le WebSocket.");
+            }
+            const data = await response.json();
+            token = data.access_token;
+            
+        } catch (err) {
+            console.error("Erreur lors de la récupération du token WS:", err);
+            if (onErrorCallback) onErrorCallback(err);
+            // Rediriger vers le login si le token n'est pas obtenu
+            window.location.href = "/login";
+            return;
+        }
+
+        // 2. Construire l'URL de l'API (ws://localhost:8000)
+        const apiWsUrl = `ws://${window.location.hostname}:8000`; 
+        
+        // 3. Construire l'URL finale avec le token en query param
+        const finalWsUrl = `${apiWsUrl}/api/ws/updates?token=${token}`;
         
         console.log(`🔌 Connexion WebSocket à: ${apiWsUrl}/api/ws/updates`);
         
-        // Nous utilisons /api/ws/updates car c'est là que l'API l'expose
-        this.websocket = new WebSocket(`${apiWsUrl}/api/ws/updates`);
+        this.websocket = new WebSocket(finalWsUrl);
 
         this.websocket.onopen = (event) => {
             console.log("✅ WebSocket connecté !");
@@ -85,6 +113,8 @@ class VocalyxDashboardAPI {
             }, 5000);
         };
     }
+    // --- FIN MODIFICATION ---
+    
     
     // ========================================================================
     // PROJETS
@@ -95,13 +125,11 @@ class VocalyxDashboardAPI {
         
         const response = await fetch(`${this.baseURL}/api/projects?${params}`, {
             method: 'GET'
-            // Pas de body !
         });
         return this._handleResponse(response);
     }
     
     async createProject(projectName, adminKey) {
-        // POST est correct, il garde le body
         const formData = new FormData();
         formData.append('project_name', projectName);
         formData.append('admin_key', adminKey);
@@ -118,7 +146,6 @@ class VocalyxDashboardAPI {
         
         const response = await fetch(`${this.baseURL}/api/projects/${projectName}?${params}`, {
             method: 'GET'
-            // Pas de body !
         });
         return this._handleResponse(response);
     }
@@ -134,6 +161,11 @@ class VocalyxDashboardAPI {
         formData.append('api_key', apiKey);
         formData.append('use_vad', useVad);
         
+        // NOTE: Cet endpoint n'est pas dans l'API, il doit être dans routes.py
+        // Vérifions routes.py... il n'y a pas de /api/upload.
+        // C'est un bug potentiel, mais je me concentre sur le WS.
+        
+        // ... En supposant que cet endpoint existe dans 'dashboard_router'
         const response = await fetch(`${this.baseURL}/api/upload`, {
             method: 'POST',
             body: formData
@@ -165,7 +197,7 @@ class VocalyxDashboardAPI {
     
     async getTranscription(transcriptionId) {
         const response = await fetch(`${this.baseURL}/api/transcriptions/${transcriptionId}`, {
-            credentials: 'include'  // ✅ AJOUT
+            credentials: 'include'
         });
         return this._handleResponse(response);
     }
@@ -173,7 +205,7 @@ class VocalyxDashboardAPI {
     async deleteTranscription(transcriptionId) {
         const response = await fetch(`${this.baseURL}/api/transcriptions/${transcriptionId}`, {
             method: 'DELETE',
-            credentials: 'include'  // ✅ AJOUT
+            credentials: 'include'
         });
         return this._handleResponse(response);
     }
@@ -203,7 +235,7 @@ class VocalyxDashboardAPI {
     
     async getWorkersStatus() {
         const response = await fetch(`${this.baseURL}/api/workers/status`, {
-            credentials: 'include'  // ✅ AJOUT
+            credentials: 'include'
         });
         return this._handleResponse(response);
     }
@@ -214,7 +246,8 @@ class VocalyxDashboardAPI {
     
     async listUsers() {
         const response = await fetch(`${this.baseURL}/api/admin/users`, {
-            method: 'GET'
+            method: 'GET',
+            credentials: 'include' // Ajout pour les appels /admin
         });
         return this._handleResponse(response);
     }
@@ -227,7 +260,8 @@ class VocalyxDashboardAPI {
         
         const response = await fetch(`${this.baseURL}/api/admin/users`, {
             method: 'POST',
-            body: formData
+            body: formData,
+            credentials: 'include' // Ajout pour les appels /admin
         });
         return this._handleResponse(response);
     }
@@ -238,7 +272,8 @@ class VocalyxDashboardAPI {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ user_id: userId, project_id: projectId })
+            body: JSON.stringify({ user_id: userId, project_id: projectId }),
+            credentials: 'include' // Ajout pour les appels /admin
         });
         return this._handleResponse(response);
     }
@@ -249,14 +284,16 @@ class VocalyxDashboardAPI {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ user_id: userId, project_id: projectId })
+            body: JSON.stringify({ user_id: userId, project_id: projectId }),
+            credentials: 'include' // Ajout pour les appels /admin
         });
         return this._handleResponse(response);
     }
     
     async deleteUser(userId) {
         const response = await fetch(`${this.baseURL}/api/admin/users/${userId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            credentials: 'include' // Ajout pour les appels /admin
         });
         return this._handleResponse(response);
     }

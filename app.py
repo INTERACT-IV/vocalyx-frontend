@@ -154,6 +154,22 @@ async def logout(request: Request):
     response.delete_cookie(AUTH_COOKIE_NAME) # Utilise la constante importée
     return response
 
+# --- AJOUT DU NOUVEL ENDPOINT ---
+@app.get("/auth/get-token", tags=["Authentication"])
+async def get_ws_token(
+    request: Request,
+    token: str = Depends(get_current_token) # Protégé par le cookie
+):
+    """
+    Fournit au JavaScript le token d'authentification (lu depuis le cookie HttpOnly)
+    afin de l'utiliser pour la connexion WebSocket.
+    """
+    # get_current_token a déjà fait le travail de vérification
+    # et a retourné la valeur du token.
+    return JSONResponse(content={"access_token": token})
+# --- FIN DE L'AJOUT ---
+
+
 # ============================================================================
 # ROUTES PRINCIPALES (MODIFIÉES)
 # ============================================================================
