@@ -242,20 +242,38 @@ async function refreshTranscriptions(page = 1, limit = 25) {
  * Affiche les transcriptions dans la grille
  */
 function renderTranscriptions(transcriptions) {
-    console.log("🎨 renderTranscriptions called with", transcriptions.length, "items");
+    console.log("=" .repeat(70));
+    console.log("🎨 renderTranscriptions appelée");
+    console.log("  Type:", typeof transcriptions);
+    console.log("  Est un Array:", Array.isArray(transcriptions));
+    console.log("  Longueur:", transcriptions ? transcriptions.length : "null/undefined");
+    console.log("  Données:", transcriptions);
+    console.log("=" .repeat(70));
     
     const container = document.getElementById("grid-table-body");
     if (!container) {
-        console.error("❌ Container 'grid-table-body' not found!");
+        console.error("❌ Container 'grid-table-body' non trouvé !");
         return;
     }
     
-    console.log("✅ Container found:", container);
+    console.log("✅ Container trouvé:", container);
     
+    // Vider le container
     container.innerHTML = "";
     
+    // Vérifier que transcriptions est bien un array
+    if (!Array.isArray(transcriptions)) {
+        console.error("❌ transcriptions n'est pas un Array !", typeof transcriptions);
+        container.innerHTML = `
+            <tr><td colspan="9" style="text-align:center;padding:2rem;color:red;">
+                Erreur: Les données reçues ne sont pas au bon format (attendu: Array, reçu: ${typeof transcriptions})
+            </td></tr>
+        `;
+        return;
+    }
+    
     if (transcriptions.length === 0) {
-        console.log("ℹ️ No transcriptions to display");
+        console.log("ℹ️ Aucune transcription à afficher");
         container.innerHTML = `
             <tr><td colspan="9" style="text-align:center;padding:2rem;">
                 Aucune transcription trouvée.
@@ -264,11 +282,17 @@ function renderTranscriptions(transcriptions) {
         return;
     }
     
-    console.log("🔨 Building table rows...");
+    console.log("🔨 Construction des lignes du tableau...");
     const fragment = document.createDocumentFragment();
     
     transcriptions.forEach((entry, index) => {
-        console.log(`  Row ${index}:`, entry.id, entry.status);
+        console.log(`  Ligne ${index}:`, {
+            id: entry.id,
+            status: entry.status,
+            project: entry.project_name,
+            worker: entry.worker_id
+        });
+        
         const row = document.createElement("tr");
         row.className = `status-${entry.status || 'unknown'}`;
         row.dataset.id = entry.id;
@@ -293,13 +317,13 @@ function renderTranscriptions(transcriptions) {
         fragment.appendChild(row);
     });
     
-    console.log("📦 Appending fragment to container...");
+    console.log("📦 Ajout du fragment au container...");
     container.appendChild(fragment);
-    console.log("✅ Rows appended");
+    console.log("✅ Fragment ajouté. Lignes dans le DOM:", container.querySelectorAll("tr").length);
     
     attachRowClickEvents();
     attachDeleteEvents();
-    console.log("✅ renderTranscriptions complete");
+    console.log("✅ renderTranscriptions terminé avec succès");
 }
 
 /**
@@ -413,34 +437,92 @@ function attachDeleteEvents() {
  * @param {object} msg - L'objet JSON reçu du serveur
  */
 function handleWebSocketMessage(msg) {
-    // --- NOUVEAU : GESTION DES DONNÉES INITIALES ---
-    if (msg.type === "initial_worker_stats") {
-        console.log("📊 Données initiales (workers) reçues via WS");
-        renderWorkerMonitoringGrid(msg.data); // Remplir la grille
-        updateWorkerHeader(msg.data); // Mettre à jour le header
+    console.log("📬 Message WebSocket reçu:", msg.type);
+    
+    // --- GESTION DE L'ÉTAT INITIAL COMPLET ---
+    if (msg.type === "initial_dashboard_state") {
+        console.log("📊 État initial complet reçu via WebSocket:", msg.data);
+        
+        const state = msg.data;
+        
+        // 1. Mettre à jour les stats workers
+        if (state.worker_stats) {
+            console.log("  ✅ Mise à jour des workers");
+            updateWorkerHeader(state.worker_stats);
+            renderWorkerMonitoringGrid(state.worker_stats);
+        } else {
+            console.warn("  ⚠️ Pas de worker_stats dans l'état initial");
+        }
+        
+        // 2. Mettre à jour les transcriptions
+        if (state.transcriptions) {
+            console.log("  ✅ Mise à jour des transcriptions:", state.transcriptions.length, "items");
+            renderTranscriptions(state.transcriptions);
+        } else {
+            console.warn("  ⚠️ Pas de transcriptions dans l'état initial");
+        }
+        
+        // 3. Mettre à jour la pagination
+        if (state.transcription_count) {
+            console.log("  ✅ Mise à jour de la pagination");
+            const totalPages = Math.ceil(state.transcription_count.total_filtered / currentLimit);
+            updatePagination(currentPage, totalPages);
+        } else {
+            console.warn("  ⚠️ Pas de transcription_count dans l'état initial");
+        }
+        
+    // --- ANCIENS MESSAGES (compatibilité) ---
+    } else if (msg.type === "initial_worker_stats") {
+        console.log("📊 Données workers (ancien format)");
+        renderWorkerMonitoringGrid(msg.data);
+        updateWorkerHeader(msg.data);
 
     } else if (msg.type === "initial_transcription_count") {
-        console.log("📊 Données initiales (count) reçues via WS");
+        console.log("📊 Données count (ancien format)");
         const countData = msg.data;
         const totalPages = Math.ceil(countData.total_filtered / currentLimit);
-        updatePagination(currentPage, totalPages); // Mettre à jour la pagination
+        updatePagination(currentPage, totalPages);
 
     } else if (msg.type === "initial_transcriptions") {
-        console.log("📊 Données initiales (transcriptions) reçues via WS");
-        renderTranscriptions(msg.data); // Remplir la grille
+        console.log("📊 Données transcriptions (ancien format)");
+        renderTranscriptions(msg.data);
 
-    // --- GESTION DES MISES À JOUR (POLLING) ---
+    // --- MISES À JOUR EN TEMPS RÉEL ---
     } else if (msg.type === "worker_stats") {
-        console.log("📊 Données worker_stats (update) reçues via WS");
+        console.log("📊 Mise à jour workers (temps réel)");
         const stats = msg.data;
-        updateWorkerHeader(stats); // Mettre à jour le header
-        renderWorkerMonitoringGrid(stats); // Mettre à jour la grille
+        updateWorkerHeader(stats);
+        renderWorkerMonitoringGrid(stats);
+        
+    } else if (msg.type === "dashboard_update") {
+        console.log("🔄 Mise à jour complète du dashboard (temps réel)");
+        const state = msg.data;
+        
+        // Mettre à jour tout
+        if (state.worker_stats) {
+            updateWorkerHeader(state.worker_stats);
+            renderWorkerMonitoringGrid(state.worker_stats);
+        }
+        
+        if (state.transcriptions) {
+            renderTranscriptions(state.transcriptions);
+        }
+        
+        if (state.transcription_count) {
+            const totalPages = Math.ceil(state.transcription_count.total_filtered / currentLimit);
+            updatePagination(currentPage, totalPages);
+        }
         
     } else if (msg.type === "transcription_update") {
-        console.log("🔄 Données transcription_update reçues via WS, rafraîchissement...");
-        
-        // Le plus simple et le plus robuste est de tout rafraîchir
+        console.log("🔄 Mise à jour transcription (temps réel)");
         refreshTranscriptions(currentPage, currentLimit);
+        
+    } else if (msg.type === "error") {
+        console.error("❌ Erreur WebSocket:", msg.message);
+        showToast(`Erreur WebSocket: ${msg.message}`, "error");
+        
+    } else {
+        console.warn("⚠️ Type de message WebSocket inconnu:", msg.type);
     }
 }
 
@@ -458,13 +540,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     setInterval(updateCurrentTime, 1000);
     updateCurrentTime();
     
-    // Lancer le chargement des filtres (synchrone, non dépendant du WS)
+    // Lancer le chargement des filtres (synchrone)
     console.log("🚀 Lancement du chargement des filtres projets...");
     await populateProjectFilters();
     console.log("✅ Filtres projets chargés.");
     
     // Démarrer la connexion WebSocket
-    // Le serveur enverra les données initiales dès la connexion.
     console.log("🔄 Connexion au WebSocket pour les données initiales et les mises à jour...");
     api.connectWebSocket(
         handleWebSocketMessage, // Callback pour les messages
