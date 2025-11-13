@@ -168,47 +168,24 @@ function renderWorkerMonitoringGrid(stats) {
 
 
 /**
- * Met à jour le statut des workers (depuis l'API)
+ * Met à jour le header avec les stats workers
  */
-async function updateWorkerStatus() {
+function updateWorkerHeader(stats) {
     const headerContainer = document.getElementById("worker-status-container");
     if (!headerContainer) return;
 
-    try {
-        const stats = await api.getWorkersStatus();
-        
-        const workerCount = stats.worker_count || 0;
-        const activeTasks = stats.active_tasks || 0;
-        
-        let statusClass = "status-ok";
-        if (workerCount === 0) {
-            statusClass = "status-error";
-        } else if (activeTasks > 0) {
-            statusClass = "status-busy";
-        }
+    const workerCount = stats.worker_count || 0;
+    const activeTasks = stats.active_tasks || 0;
+    
+    let statusClass = "status-ok";
+    if (workerCount === 0) statusClass = "status-error";
+    else if (activeTasks > 0) statusClass = "status-busy";
 
-        headerContainer.innerHTML = `
-            <span class="worker-status-light ${statusClass}"></span>
-            <span style="font-weight:600;">Workers: ${activeTasks} actifs (${workerCount} total)</span>
-            ${stats.error ? `<span style="color:#dc3545;font-weight:600;">(Erreur: ${stats.error})</span>` : ''}
-        `;
-
-        // Remplir la grille détaillée avec les mêmes données
-        renderWorkerMonitoringGrid(stats);
-
-    } catch (err) {
-        console.error("Failed to fetch worker status:", err);
-        headerContainer.innerHTML = `
-            <span class="worker-status-light status-error"></span>
-            <span style="font-weight:600;">Workers: Indisponible</span>
-        `;
-
-        // Vider la grille en cas d'erreur
-        const gridBody = document.getElementById("worker-monitoring-grid");
-        if (gridBody) {
-            gridBody.innerHTML = `<tr><td colspan="11" style="text-align:center; color:red;">Erreur de connexion aux workers.</td></tr>`;
-        }
-    }
+    headerContainer.innerHTML = `
+        <span class="worker-status-light ${statusClass}"></span>
+        <span style="font-weight:600;">Workers: ${activeTasks} actifs (${workerCount} total)</span>
+        ${stats.error ? `<span style="color:#dc3545;font-weight:600;">(Erreur: ${stats.error})</span>` : ''}
+    `;
 }
 
 /**
@@ -436,30 +413,28 @@ function attachDeleteEvents() {
  * @param {object} msg - L'objet JSON reçu du serveur
  */
 function handleWebSocketMessage(msg) {
-    
-    if (msg.type === "worker_stats") {
-        console.log("📊 Données worker_stats reçues via WS");
-        const stats = msg.data;
-        
-        // Mettre à jour le header
-        const headerContainer = document.getElementById("worker-status-container");
-        const workerCount = stats.worker_count || 0;
-        const activeTasks = stats.active_tasks || 0;
-        
-        let statusClass = "status-ok";
-        if (workerCount === 0) statusClass = "status-error";
-        else if (activeTasks > 0) statusClass = "status-busy";
+    // --- NOUVEAU : GESTION DES DONNÉES INITIALES ---
+    if (msg.type === "initial_worker_stats") {
+        console.log("📊 Données initiales (workers) reçues via WS");
+        renderWorkerMonitoringGrid(msg.data); // Remplir la grille
+        updateWorkerHeader(msg.data); // Mettre à jour le header
 
-        if (headerContainer) {
-            headerContainer.innerHTML = `
-                <span class="worker-status-light ${statusClass}"></span>
-                <span style="font-weight:600;">Workers: ${activeTasks} actifs (${workerCount} total)</span>
-                ${stats.error ? `<span style="color:#dc3545;font-weight:600;">(Erreur: ${stats.error})</span>` : ''}
-            `;
-        }
-        
-        // Mettre à jour la grille
-        renderWorkerMonitoringGrid(stats);
+    } else if (msg.type === "initial_transcription_count") {
+        console.log("📊 Données initiales (count) reçues via WS");
+        const countData = msg.data;
+        const totalPages = Math.ceil(countData.total_filtered / currentLimit);
+        updatePagination(currentPage, totalPages); // Mettre à jour la pagination
+
+    } else if (msg.type === "initial_transcriptions") {
+        console.log("📊 Données initiales (transcriptions) reçues via WS");
+        renderTranscriptions(msg.data); // Remplir la grille
+
+    // --- GESTION DES MISES À JOUR (POLLING) ---
+    } else if (msg.type === "worker_stats") {
+        console.log("📊 Données worker_stats (update) reçues via WS");
+        const stats = msg.data;
+        updateWorkerHeader(stats); // Mettre à jour le header
+        renderWorkerMonitoringGrid(stats); // Mettre à jour la grille
         
     } else if (msg.type === "transcription_update") {
         console.log("🔄 Données transcription_update reçues via WS, rafraîchissement...");
@@ -478,35 +453,19 @@ console.log("🚀 main.js loaded");
 // Initialisation au chargement de la page
 document.addEventListener('DOMContentLoaded', async () => {
     console.log("✅ DOMContentLoaded fired");
-    console.log("🔍 Checking if 'api' exists:", typeof api);
-    console.log("🔍 Checking dashboard elements:");
-    console.log("  - grid-table-body:", document.getElementById("grid-table-body"));
-    console.log("  - status-filter:", document.getElementById("status-filter"));
-    console.log("  - project-filter:", document.getElementById("project-filter"));
     
     // Démarrer la mise à jour de l'heure
     setInterval(updateCurrentTime, 1000);
     updateCurrentTime();
     
-    // Démarrer le monitoring des workers (lancer l'intervalle)
-    setInterval(updateWorkerStatus, 5000);
-    
-    // Lancer tous les chargements de données initiaux en parallèle
-    console.log("🚀 Lancement des chargements initiaux en parallèle...");
-    
-    const statusPromise = updateWorkerStatus(); // 1. Appel statut worker (qui remplit aussi la grille)
-    const projectsPromise = populateProjectFilters(); // 2. Appel liste projets
-    const transcriptionsPromise = refreshTranscriptions(1, 25); // 3. Appel transcriptions (le plus important)
-
-    try {
-        await Promise.all([statusPromise, projectsPromise, transcriptionsPromise]);
-        console.log("✅ Chargements initiaux terminés.");
-    } catch (err) {
-        console.error("❌ Erreur lors du chargement initial parallèle:", err);
-    }
+    // Lancer le chargement des filtres (synchrone, non dépendant du WS)
+    console.log("🚀 Lancement du chargement des filtres projets...");
+    await populateProjectFilters();
+    console.log("✅ Filtres projets chargés.");
     
     // Démarrer la connexion WebSocket
-    console.log("🔄 Connexion au WebSocket pour les mises à jour en temps réel...");
+    // Le serveur enverra les données initiales dès la connexion.
+    console.log("🔄 Connexion au WebSocket pour les données initiales et les mises à jour...");
     api.connectWebSocket(
         handleWebSocketMessage, // Callback pour les messages
         (error) => { // Callback pour les erreurs
@@ -515,5 +474,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     );
     
-    console.log("✅ Initialization complete");
+    console.log("✅ Initialization complete. En attente des données WebSocket.");
 });
