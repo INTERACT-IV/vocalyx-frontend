@@ -104,11 +104,7 @@ function renderWorkerMonitoringGrid(stats) {
         const activeTasks = activeWorkers[workerName] || [];
         
         const health = workerData?.health;
-        
-        // --- AJOUT LECTURE DB_STATS ---
-        // 'db_stats' est maintenant ajouté par l'API
         const db_stats = workerData?.db_stats;
-        // --- FIN AJOUT ---
         
         let status = "offline";
         let statusClass = "status-offline";
@@ -135,14 +131,21 @@ function renderWorkerMonitoringGrid(stats) {
             tasksDone = Object.values(totalData).reduce((sum, count) => sum + (typeof count === 'number' ? count : 0), 0);
         }
         
-        // --- Exploitation des données 'health' ---
+        // Exploitation des données 'health'
         const cpuPercent = health?.cpu_percent;
         const ramPercent = health?.memory_percent;
         const ramRss = health?.memory_rss_bytes;
         const uptime = health?.uptime_seconds;
         
-        // --- MODIFICATION : Lire depuis db_stats ---
+        // ✅ CORRECTION : Lire depuis db_stats (données DB persistantes)
         const totalAudio = db_stats?.total_audio_processed_s;
+        
+        console.log(`Worker ${workerName}:`, {
+            health_exists: !!health,
+            db_stats_exists: !!db_stats,
+            totalAudio: totalAudio,
+            db_stats_content: db_stats
+        });
         
         const activeTaskCount = activeTasks.length;
         const chargeBar = "N/A"; 
@@ -159,7 +162,7 @@ function renderWorkerMonitoringGrid(stats) {
             <td class="col-ram-bar">${createProgressBar(ramPercent)}</td>
             <td class="col-uptime">${formatUptime(uptime)}</td>
             <td class="col-jobs">${tasksDone}</td>
-            <td class="col-audio">${formatDuration(totalAudio)}</td> 
+            <td class="col-audio">${formatDuration(totalAudio)}</td>
         `;
         
         gridBody.appendChild(row);
