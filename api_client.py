@@ -73,6 +73,70 @@ class VocalyxAPIClient:
         except httpx.HTTPError as e:
             logger.error(f"Error getting admin API key: {e}")
             raise
+
+    async def get_user_profile_async(self, jwt_token: str) -> Dict[str, Any]:
+        """
+        [Async] Récupère les informations du profil utilisateur courant.
+        """
+        try:
+            headers = self._get_headers(internal=False, jwt_token=jwt_token)
+            response = await self.async_client.get(
+                f"{self.base_url}/api/user/me",
+                headers=headers
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPError as e:
+            logger.error(f"Error getting user profile (async): {e}")
+            raise
+
+    def get_user_profile(self, jwt_token: str) -> Dict[str, Any]:
+        """
+        Récupère les informations du profil utilisateur (synchrone).
+        """
+        try:
+            headers = self._get_headers(internal=False, jwt_token=jwt_token)
+            response = self.client.get(
+                f"{self.base_url}/api/user/me",
+                headers=headers
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPError as e:
+            logger.error(f"Error getting user profile: {e}")
+            raise
+
+    async def get_user_projects_async(self, jwt_token: str) -> List[Dict[str, Any]]:
+        """
+        [Async] Récupère la liste des projets (et leurs clés) accessibles pour l'utilisateur courant.
+        """
+        try:
+            headers = self._get_headers(internal=False, jwt_token=jwt_token)
+            response = await self.async_client.get(
+                f"{self.base_url}/api/user/projects",
+                headers=headers
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPError as e:
+            logger.error(f"Error getting user projects: {e}")
+            raise
+
+    def get_user_projects(self, jwt_token: str) -> List[Dict[str, Any]]:
+        """
+        [Sync] Version synchrone utilisée par les routes proxy du dashboard.
+        """
+        try:
+            headers = self._get_headers(internal=False, jwt_token=jwt_token)
+            response = self.client.get(
+                f"{self.base_url}/api/user/projects",
+                headers=headers
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPError as e:
+            logger.error(f"Error getting user projects (sync): {e}")
+            raise
     
     # ========================================================================
     # PROJETS
@@ -179,6 +243,37 @@ class VocalyxAPIClient:
         except httpx.HTTPError as e:
             logger.error(f"Error getting transcriptions: {e}")
             raise
+
+    def get_user_transcriptions(
+        self,
+        jwt_token: str,
+        page: int = 1,
+        limit: int = 25,
+        status: Optional[str] = None,
+        project: Optional[str] = None,
+        search: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Liste les transcriptions accessibles à l'utilisateur courant."""
+        try:
+            params = {"page": page, "limit": limit}
+            if status:
+                params["status"] = status
+            if project:
+                params["project"] = project
+            if search:
+                params["search"] = search
+
+            headers = self._get_headers(internal=False, jwt_token=jwt_token)
+            response = self.client.get(
+                f"{self.base_url}/api/user/transcriptions",
+                params=params,
+                headers=headers
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPError as e:
+            logger.error(f"Error getting user transcriptions: {e}")
+            raise
     
     def get_transcription(self, transcription_id: str) -> Dict[str, Any]:
         """Récupère une transcription par son ID"""
@@ -191,6 +286,20 @@ class VocalyxAPIClient:
             return response.json()
         except httpx.HTTPError as e:
             logger.error(f"Error getting transcription: {e}")
+            raise
+
+    def get_user_transcription(self, jwt_token: str, transcription_id: str) -> Dict[str, Any]:
+        """Récupère une transcription à laquelle l'utilisateur peut accéder."""
+        try:
+            headers = self._get_headers(internal=False, jwt_token=jwt_token)
+            response = self.client.get(
+                f"{self.base_url}/api/user/transcriptions/{transcription_id}",
+                headers=headers
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPError as e:
+            logger.error(f"Error getting user transcription: {e}")
             raise
     
     def delete_transcription(self, transcription_id: str) -> Dict[str, Any]:
@@ -231,6 +340,35 @@ class VocalyxAPIClient:
             return response.json()
         except httpx.HTTPError as e:
             logger.error(f"Error counting transcriptions: {e}")
+            raise
+
+    def count_user_transcriptions(
+        self,
+        jwt_token: str,
+        status: Optional[str] = None,
+        project: Optional[str] = None,
+        search: Optional[str] = None
+    ) -> Dict[str, int]:
+        """Compte les transcriptions accessibles à l'utilisateur courant."""
+        try:
+            params = {}
+            if status:
+                params["status"] = status
+            if project:
+                params["project"] = project
+            if search:
+                params["search"] = search
+
+            headers = self._get_headers(internal=False, jwt_token=jwt_token)
+            response = self.client.get(
+                f"{self.base_url}/api/user/transcriptions/count",
+                params=params,
+                headers=headers
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPError as e:
+            logger.error(f"Error counting user transcriptions: {e}")
             raise
     
     # ========================================================================

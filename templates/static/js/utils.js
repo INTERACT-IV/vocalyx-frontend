@@ -18,19 +18,31 @@ function formatHumanDate(isoString) {
 }
 
 /**
- * Affiche une notification toast
+ * Affiche une notification toast avec wording standardisé
  * @param {string} message - Message à afficher
  * @param {string} type - Type de toast (success, error, warning, info)
  */
 function showToast(message, type="success") {
+    // Standardiser le wording des messages
+    let standardizedMessage = message;
+    
+    // S'assurer que les messages d'erreur commencent par un verbe d'action
+    if (type === "error" && !/^(Erreur|Échec|Impossible|Échec)/i.test(message)) {
+        if (!/^(Erreur|Échec|Impossible)/i.test(message)) {
+            standardizedMessage = `Erreur: ${message}`;
+        }
+    }
+    
     toastr.options = {
         positionClass: "toast-top-right",
-        timeOut: 3000,
+        timeOut: type === "error" ? 5000 : 3000,
         progressBar: true,
         closeButton: true,
-        newestOnTop: true
+        newestOnTop: true,
+        showDuration: 200,
+        hideDuration: 200
     };
-    toastr[type](message);
+    toastr[type](standardizedMessage);
 }
 
 /**

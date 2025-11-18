@@ -5,12 +5,13 @@ Point d'entrée principal du Dashboard (corrigé pour import circulaire)
 
 import logging
 from contextlib import asynccontextmanager
+from datetime import datetime
 from fastapi import (
     FastAPI, Request, Depends, HTTPException, status, Form
 )
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 import uvicorn
 
@@ -174,50 +175,58 @@ async def get_ws_token(
 # ROUTES PRINCIPALES (MODIFIÉES)
 # ============================================================================
 
-@app.get("/", response_class=HTMLResponse, tags=["Root"])
-async def root(request: Request, token: str = Depends(get_current_token)):
-    """
-    Sert le Dashboard principal.
-    Protégé par le cookie de login.
-    Récupère la clé API Admin et l'injecte dans le JS.
-    """
+async def render_dashboard(request: Request, token: str, default_view: str = "transcriptions"):
     api_client: VocalyxAPIClient = request.app.state.api_client
-    
     try:
-        # Utiliser le token pour récupérer la vraie clé API Admin
-        admin_project_details = await api_client.get_admin_api_key_async(token)
-        admin_api_key = admin_project_details.get("api_key")
-        
-        return templates.TemplateResponse("dashboard.html", {
-            "request": request,
-            "api_url": config.api_url,
-            "DEFAULT_PROJECT_NAME": config.admin_project_name,
-            "DEFAULT_PROJECT_KEY": admin_api_key  # Injection de la clé
-        })
+        user_projects = await api_client.get_user_projects_async(token)
+        user_profile = await api_client.get_user_profile_async(token)
     except Exception as e:
-        logger.error(f"Erreur lors de la récupération de la clé admin: {e}")
-        # Si la clé admin expire, rediriger vers le login
+        logger.error(f"Erreur lors de la récupération des données utilisateur: {e}")
         return RedirectResponse(url="/auth/logout", status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
+    admin_project_name = config.admin_project_name
+    user_is_admin = bool(user_profile.get("is_admin"))
+    admin_project = next((p for p in user_projects if p.get("name") == admin_project_name), None)
+    default_project = admin_project or (user_projects[0] if user_projects else None)
+
+    default_project_name = default_project.get("name") if default_project else None
+    default_project_key = default_project.get("api_key") if default_project else None
+
+    last_login_at = user_profile.get("last_login_at")
+    last_login_display = None
+    if last_login_at:
+        try:
+            dt = datetime.fromisoformat(last_login_at)
+            last_login_display = dt.strftime("%d/%m/%Y %H:%M:%S")
+        except ValueError:
+            last_login_display = last_login_at
+
+    return templates.TemplateResponse("dashboard.html", {
+        "request": request,
+        "api_url": config.api_url,
+        "DEFAULT_PROJECT_NAME": default_project_name or "",
+        "DEFAULT_PROJECT_KEY": default_project_key or "",
+        "active_page": default_view,
+        "user_is_admin": user_is_admin,
+        "current_username": user_profile.get("username"),
+        "user_last_login": last_login_display,
+        "raw_last_login": last_login_at
+    })
+
+
+@app.get("/", tags=["Root"], response_class=HTMLResponse)
+async def root(request: Request, token: str = Depends(get_current_token)):
+    return await render_dashboard(request, token)
+
+
+@app.get("/dashboard", tags=["Dashboard"], response_class=HTMLResponse)
+async def dashboard_page(request: Request, token: str = Depends(get_current_token)):
+    return await render_dashboard(request, token)
 
 @app.get("/admin", response_class=HTMLResponse, tags=["Admin"])
 async def admin_page(request: Request, token: str = Depends(get_current_token)):
-    """
-    Sert la nouvelle page d'administration.
-    Récupère également la clé API Admin pour la gestion.
-    """
-    api_client: VocalyxAPIClient = request.app.state.api_client
-    try:
-        admin_project_details = await api_client.get_admin_api_key_async(token)
-        admin_api_key = admin_project_details.get("api_key")
-        
-        return templates.TemplateResponse("admin.html", {
-            "request": request,
-            "ADMIN_API_KEY": admin_api_key
-        })
-    except Exception as e:
-        logger.error(f"Erreur lors de la récupération de la clé admin: {e}")
-        return RedirectResponse(url="/auth/logout", status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+    """Compatibilité: ouvre le dashboard sur l'onglet Utilisateurs."""
+    return await render_dashboard(request, token, default_view="users")
 
 
 @app.get("/health", tags=["System"])

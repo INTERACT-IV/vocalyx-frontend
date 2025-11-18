@@ -1,174 +1,344 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<title>Vocalyx - Transcriptions Dashboard</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastr@2.1.4/build/toastr.min.css">
-<link rel="stylesheet" href="/static/css/dashboard.css">
-</head>
-<body>
-<div class="loading-overlay" id="loading-overlay">
-    <div class="spinner"></div>
+{% extends "dashboard_base.html" %}
+
+{% block title %}Vocalyx Dashboard{% endblock %}
+
+{% block page_content %}
+<div class="view-wrapper" data-view="transcriptions">
+    <section class="panel hero-panel">
+        <div class="panel-header">
+            <div>
+                <h1>Transcriptions</h1>
+                <p>Suivez l'état des uploads et la disponibilité des workers en temps réel.</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:1rem;">
+                <div id="worker-status-container" class="worker-status-pill">
+                    <span class="worker-status-light"></span>
+                    Initialisation des workers...
+                </div>
+                <button id="cta-transcribe-btn" class="btn btn-warning cta-hero-btn" type="button">Nouvelle transcription</button>
+            </div>
+        </div>
+
+        <div class="filters-panel">
+            <div class="filter-field">
+                <label for="project-filter">Projet</label>
+                <select id="project-filter">
+                    <option value="">Tous les projets</option>
+                </select>
+            </div>
+            <div class="filter-field">
+                <label for="status-filter">Statut</label>
+                <select id="status-filter">
+                    <option value="">Tous</option>
+                    <option value="pending">En attente</option>
+                    <option value="processing">En cours</option>
+                    <option value="done">Terminé</option>
+                    <option value="error">Erreur</option>
+                </select>
+            </div>
+            <div class="filter-field search-field">
+                <label for="search-input">Recherche</label>
+                <input type="text" id="search-input" placeholder="ID, projet, langue...">
+                <small class="search-help-text">Recherche sur ID, nom de projet, langue</small>
+            </div>
+            <div class="filter-field filter-actions">
+                <label>&nbsp;</label>
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <span id="filters-active-badge" class="filters-active-badge" style="display:none;">
+                        <span id="filters-count">0</span> filtre(s) actif(s)
+                    </span>
+                    <button id="reset-filters-btn" class="btn btn-danger reset-filters-btn" style="display:none;">Réinitialiser</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Liste des transcriptions</h2>
+        </div>
+        <div class="table-wrapper">
+            <table class="grid-table">
+                <thead>
+                    <tr>
+                        <th class="col-status">Statut</th>
+                        <th class="col-project">Projet</th>
+                        <th class="col-id">ID</th>
+                        <th class="col-instance">Instance</th>
+                        <th class="col-lang">Langue</th>
+                        <th class="group-header" colspan="2">Temps</th>
+                        <th class="col-date">Créé le</th>
+                        <th class="col-actions">Actions</th>
+                    </tr>
+                    <tr>
+                        <th></th><th></th><th></th><th></th><th></th>
+                        <th class="col-duree dur-group" title="Durée totale de l'audio en secondes">Durée</th>
+                        <th class="col-process dur-group" title="Temps de traitement en secondes">Traitement</th>
+                        <th></th><th></th>
+                    </tr>
+                </thead>
+                <tbody id="grid-table-body"></tbody>
+            </table>
+            <div id="transcriptions-cards" class="transcriptions-cards"></div>
+        </div>
+        <div class="pagination" id="pagination"></div>
+    </section>
 </div>
 
-<header>
-    <div class="filters">
-        <label for="project-filter">Projet:</label>
-        <select id="project-filter">
-            <option value="">Tous les projets</option>
-            </select>
+{% if user_is_admin %}
+<div class="view-wrapper" data-view="projects">
+    <section class="panel hero-panel">
+        <div class="panel-header">
+            <div>
+                <h1>Projets</h1>
+                <p>Créez, organisez et surveillez vos espaces d'API.</p>
+            </div>
+            <div class="panel-actions">
+                <button id="refresh-projects-btn" class="btn btn-primary">Rafraîchir</button>
+                <a href="/admin" class="btn btn-success">Centre Admin</a>
+            </div>
+        </div>
+        <p class="hero-description">
+            Chaque projet dispose de sa propre clé API. Visualisez rapidement les espaces actifs et leurs secrets.
+        </p>
+    </section>
 
-        <label for="status-filter">Statut:</label>
-        <select id="status-filter">
-            <option value="">Tous</option>
-            <option value="pending">En attente</option>
-            <option value="processing">En cours</option>
-            <option value="done">Terminé</option>
-            <option value="error">Erreur</option>
-        </select>
-        <input type="text" id="search-input" placeholder="Rechercher...">
-    </div>
-    <div style="display:flex;align-items:center;gap:1rem;">
-        <div id="current-time"></div>
-        <div id="worker-status-container" style="display:flex; gap: 0.5rem; align-items: center;"></div>
-    </div>
-    <div style="display:flex;align-items:center;gap:0.5rem;">
-        <button id="open-upload-modal-btn" class="btn btn-warning">Upload Audio</button>
-        <a href="/admin" class="btn btn-primary">Gérer les Projets</a>
-        <a href="/auth/logout" class="btn btn-danger">Déconnexion</a>
-        
-        <button id="export-btn" class="btn btn-success">Exporter</button>
-    </div>
-</header>
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Catalogue des projets</h2>
+        </div>
+        <div id="projects-grid" class="projects-grid">
+            <div class="section-empty">
+                Chargement des projets en cours...
+            </div>
+        </div>
+    </section>
 
-<h2>Monitoring des Workers</h2>
-<div class="grid-container">
-    <table class="grid-table worker-monitoring-table">
-        <thead>
-            <tr>
-                <th class="col-instance">Instance</th>
-                <th class="col-status">Statut</th>
-                <th class="col-charge-num">Charge (Nb)</th>
-                <th class="col-charge-bar">Charge %</th>
-                <th class="col-cpu-num">CPU %</th>
-                <th class="col-cpu-bar">CPU</th>
-                <th class="col-ram-num">RAM %</th>
-                <th class="col-ram-bar">RAM</th>
-                <th class="col-uptime">Uptime</th>
-                <th class="col-jobs">Tâches (total)</th>
-                <th class="col-audio">Tps Audio Traité</th>
-            </tr>
-        </thead>
-        <tbody id="worker-monitoring-grid">
-            </tbody>
-    </table>
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Gestion des Projets</h2>
+        </div>
+
+        <div class="form-group-inline project-create-form">
+            <input type="text" id="new-project-name-input" placeholder="Nom du nouveau projet">
+            <button id="create-project-btn" class="btn btn-primary">Créer</button>
+        </div>
+
+        <div class="table-wrapper">
+            <table class="grid-table">
+                <thead>
+                    <tr>
+                        <th>Projet</th>
+                        <th>Clé API (cliquez pour révéler)</th>
+                        <th>Créé le</th>
+                    </tr>
+                </thead>
+                <tbody id="projects-table-body">
+                    <tr><td colspan="3" style="text-align:center;">Chargement...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endif %}
+
+<div class="view-wrapper" data-view="users">
+    <section class="panel hero-panel">
+        <div class="panel-header">
+            <div>
+                <h1>Utilisateurs & Accès</h1>
+                <p>Centralisez les rôles et l'association aux projets.</p>
+            </div>
+        </div>
+        <p class="hero-description">
+            Gérez vos utilisateurs, leurs rôles et leurs projets associés directement ici.
+        </p>
+    </section>
+
+    {% if user_is_admin %}
+    <section class="panel placeholder-panel">
+        <div class="panel-header">
+            <h2>Créer un utilisateur</h2>
+        </div>
+        <div class="form-group-inline user-create-form">
+            <input type="text" id="new-user-username" placeholder="Nom d'utilisateur" required minlength="3">
+            <input type="password" id="new-user-password" placeholder="Mot de passe" required minlength="6">
+            <div class="password-strength">
+                <div class="password-strength-bar" id="password-strength-bar"></div>
+            </div>
+            <label class="user-admin-toggle">
+                <input type="checkbox" id="new-user-is-admin">
+                <span>Admin</span>
+            </label>
+            <button id="create-user-btn" class="btn btn-primary">Créer</button>
+        </div>
+    </section>
+    {% else %}
+    <section class="panel placeholder-panel">
+        <div class="panel-header">
+            <h2>Accès restreint</h2>
+        </div>
+        <div style="padding:2rem;text-align:center;color:#666;">
+            <p style="font-size:1.1rem;margin-bottom:1rem;">Accès réservé aux administrateurs.</p>
+            <p>Contactez un administrateur pour gérer les comptes utilisateurs.</p>
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Utilisateurs existants</h2>
+        </div>
+        <div id="users-list-container" class="users-list">
+            <p>Chargement des utilisateurs...</p>
+        </div>
+    </section>
 </div>
 
-<h2>Transcriptions</h2>
-<div class="grid-container">
-    <table class="grid-table">
-        <thead>
-            <tr>
-                <th class="col-status">Statut</th>
-                <th class="col-project">Projet</th>
-                <th class="col-id">ID</th>
-                <th class="col-instance">Instance</th>
-                <th class="col-lang">Langue</th>
-                <th class="col-duree">Durée Audio</th>
-                <th class="col-process">Tps. Trait.</th>
-                <th class="col-date">Créé le</th>
-                <th class="col-actions">Actions</th>
-            </tr>
-        </thead>
-        <tbody id="grid-table-body">
-            </tbody>
-    </table>
+{% if user_is_admin %}
+<div class="view-wrapper" data-view="workers">
+    <section class="panel hero-panel">
+        <div class="panel-header">
+            <div>
+                <h1>Workers Celery</h1>
+                <p>Visualisez la capacité, la santé CPU/RAM et la charge de vos workers.</p>
+            </div>
+            <div class="panel-actions">
+                <span>Actualisé via WebSocket</span>
+            </div>
+        </div>
+        <p class="hero-description">
+            Les données sont mises à jour en temps réel via Redis Pub/Sub et Celery.
+            Ajustez vos workers depuis <code>make scale-workers</code> pour absorber plus de charge.
+        </p>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <h2>Monitoring temps réel</h2>
+        </div>
+        <div class="table-wrapper">
+            <table class="grid-table worker-monitoring-table">
+                <thead>
+                    <tr>
+                        <th class="col-instance">Instance</th>
+                        <th class="col-status">Statut</th>
+                        <th class="col-charge-num">Charge (Nb)</th>
+                        <th class="col-charge-bar">Charge %</th>
+                        <th class="col-cpu-num">CPU %</th>
+                        <th class="col-cpu-bar">CPU</th>
+                        <th class="col-ram-num">RAM %</th>
+                        <th class="col-ram-bar">RAM</th>
+                        <th class="col-uptime">Uptime</th>
+                        <th class="col-jobs">Tâches (total)</th>
+                        <th class="col-audio">Tps Audio Traité</th>
+                    </tr>
+                </thead>
+                <tbody id="worker-monitoring-grid"></tbody>
+            </table>
+        </div>
+    </section>
 </div>
+{% endif %}
 
-<div class="pagination" id="pagination"></div>
+<div class="view-wrapper" data-view="statistics">
+    <section class="panel hero-panel">
+        <div class="panel-header">
+            <div>
+                <h1>Statistiques</h1>
+                <p>Indicateurs consolidés mis à jour via WebSocket.</p>
+            </div>
+            <div class="panel-actions">
+                <span>Temps réel</span>
+            </div>
+        </div>
+        <p class="hero-description">
+            Ces métriques proviennent de la base Vocalyx ainsi que des sondes Celery.
+            Elles se rafraîchissent automatiquement sans recharger la page.
+        </p>
+    </section>
 
-<div id="modal" class="modal">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <div id="modal-body"></div>
-    </div>
+    <section class="panel stats-panel">
+        <div class="panel-header">
+            <h2>Vue globale</h2>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-label">Projets actifs</span>
+                <span class="stat-value" id="stat-projects">—</span>
+                <span class="stat-subtitle">en temps réel</span>
+                <canvas class="sparkline" id="sparkline-projects" width="100" height="30"></canvas>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Utilisateurs</span>
+                <span class="stat-value" id="stat-users">—</span>
+                <span class="stat-subtitle">total</span>
+                <canvas class="sparkline" id="sparkline-users" width="100" height="30"></canvas>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Workers connectés</span>
+                <span class="stat-value" id="stat-workers">—</span>
+                <span class="stat-subtitle">actifs</span>
+                <canvas class="sparkline" id="sparkline-workers" width="100" height="30"></canvas>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Transcriptions suivies</span>
+                <span class="stat-value" id="stat-transcriptions">—</span>
+                <span class="stat-subtitle">sur 24h</span>
+                <canvas class="sparkline" id="sparkline-transcriptions" width="100" height="30"></canvas>
+            </div>
+        </div>
+    </section>
 </div>
 
 <div id="upload-modal" class="modal">
-    <div class="modal-content" style="max-width: 500px;">
+    <div class="modal-content" style="max-width: 550px;">
         <span class="close" id="upload-modal-close">&times;</span>
         <h2>Nouvelle Transcription</h2>
         
-        <div class="form-group">
-            <label for="upload-project-select">Projet de destination :</label>
-            <select id="upload-project-select">
-                </select>
+        <!-- Stepper visuel -->
+        <div class="upload-stepper">
+            <div class="upload-step-item active" data-step="1">
+                <div class="upload-step-number">1</div>
+                <div class="upload-step-label">Projet</div>
+            </div>
+            <div class="upload-step-item" data-step="2">
+                <div class="upload-step-number">2</div>
+                <div class="upload-step-label">Clé API</div>
+            </div>
+            <div class="upload-step-item" data-step="3">
+                <div class="upload-step-number">3</div>
+                <div class="upload-step-label">Fichier</div>
+            </div>
+            <div class="upload-step-item" data-step="4">
+                <div class="upload-step-number">4</div>
+                <div class="upload-step-label">Options</div>
+            </div>
         </div>
         
+        <div class="form-group upload-step">Étape 1 : Projet de destination</div>
         <div class="form-group">
-            <label for="upload-api-key-input">Clé d'API du projet sélectionné :</label>
+            <label for="upload-project-select">Projet :</label>
+            <select id="upload-project-select"></select>
+        </div>
+        <div class="form-group upload-step">Étape 2 : Clé API du projet</div>
+        <div class="form-group">
+            <label for="upload-api-key-input">Clé API :</label>
             <input type="password" id="upload-api-key-input" placeholder="Collez la clé API (vk_...) ici">
             <small>Note: Pour le projet 'default_internal', la clé est injectée automatiquement.</small>
         </div>
-
+        <div class="form-group upload-step">Étape 3 : Fichier Audio</div>
         <div class="form-group">
             <label for="upload-file-input">Fichier audio :</label>
             <input type="file" id="upload-file-input" accept="audio/*">
         </div>
-        
+        <div class="form-group upload-step">Étape 4 : Options</div>
         <div class="form-group">
             <input type="checkbox" id="upload-use-vad" checked>
             <label for="upload-use-vad" style="display: inline-block; font-weight: normal;">Utiliser la détection de voix (VAD)</label>
         </div>
-        
         <button id="upload-submit-btn" class="btn btn-success" style="width: 100%; padding: 0.8rem; font-size: 1rem;">Lancer la transcription</button>
     </div>
 </div>
+{% endblock %}
 
-<div id="projects-modal" class="modal">
-    <div class="modal-content" style="max-width: 700px;">
-        <span class="close" id="projects-modal-close">&times;</span>
-        <h2>Gestion des Projets</h2>
-        
-        <div class="form-group-inline">
-            <input type="text" id="new-project-name-input" placeholder="Nom du nouveau projet">
-            <button id="create-project-btn" class="btn btn-primary">Créer</button>
-        </div>
-        
-        <table class="grid-table" style="margin-top: 1rem;">
-            <thead>
-                <tr>
-                    <th>Projet</th>
-                    <th>Clé d'API (X-API-Key)</th>
-                    <th>Créé le</th>
-                </tr>
-            </thead>
-            <tbody id="projects-table-body">
-                </tbody>
-        </table>
-    </div>
-</div>
-
-
-<script>
-    window.VOCALYX_CONFIG = {
-        API_URL: "{{ api_url|e }}",
-        DEFAULT_PROJECT_NAME: "{{ DEFAULT_PROJECT_NAME|e }}",
-        DEFAULT_PROJECT_KEY: "{{ DEFAULT_PROJECT_KEY|e }}"
-    };
-    console.log("✅ VOCALYX_CONFIG loaded:", window.VOCALYX_CONFIG);
-</script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/toastr@2.1.4/build/toastr.min.js"></script>
-
-<!-- ✅ ORDRE CRITIQUE : utils AVANT api AVANT tout le reste -->
-<script src="/static/js/utils.js"></script>
-<script src="/static/js/api.js"></script>
-<script src="/static/js/modal.js"></script>
-<script src="/static/js/cards.js"></script>
-<script src="/static/js/events.js"></script>
-<script src="/static/js/main.js"></script>
-</body>
-</html>

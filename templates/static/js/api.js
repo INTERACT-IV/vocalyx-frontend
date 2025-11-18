@@ -10,6 +10,7 @@ class VocalyxDashboardAPI {
         this.baseURL = window.location.origin;
         // this.wsURL = this.baseURL.replace(/^http/, 'ws'); // Plus utilisé
         this.websocket = null;
+        this.pendingMessages = [];
         console.log("🔧 API Client initialized, baseURL:", this.baseURL);
     }
     
@@ -51,10 +52,14 @@ class VocalyxDashboardAPI {
 
     sendWebSocketMessage(message) {
         if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
-            console.error("WebSocket is not connected. Cannot send message.");
-            // Tenter une reconnexion silencieuse si possible
+            console.warn("WebSocket not ready, message en file:", message?.type);
+            this.pendingMessages.push(message);
             return;
         }
+        this._internalSend(message);
+    }
+    
+    _internalSend(message) {
         try {
             this.websocket.send(JSON.stringify(message));
         } catch (err) {
@@ -62,7 +67,15 @@ class VocalyxDashboardAPI {
         }
     }
     
-    async connectWebSocket(onMessageCallback, onErrorCallback) {
+    _flushPendingMessages() {
+        if (!this.pendingMessages.length) return;
+        console.log(`⬆️ Envoi de ${this.pendingMessages.length} message(s) en attente`);
+        const queue = [...this.pendingMessages];
+        this.pendingMessages = [];
+        queue.forEach(msg => this._internalSend(msg));
+    }
+    
+    async connectWebSocket(onMessageCallback, onErrorCallback, onOpenCallback) {
         // Assure une seule connexion
         if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
             console.warn("WebSocket déjà connecté.");
@@ -100,6 +113,14 @@ class VocalyxDashboardAPI {
 
         this.websocket.onopen = (event) => {
             console.log("✅ WebSocket connecté !");
+            this._flushPendingMessages();
+            if (onOpenCallback) {
+                try {
+                    onOpenCallback();
+                } catch (err) {
+                    console.error("Erreur onOpenCallback:", err);
+                }
+            }
         };
 
         this.websocket.onmessage = (event) => {
@@ -131,6 +152,14 @@ class VocalyxDashboardAPI {
     // ========================================================================
     // PROJETS
     // ========================================================================
+    
+    async listUserProjects() {
+        const response = await fetch(`${this.baseURL}/api/user/projects`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+        return this._handleResponse(response);
+    }
     
     async listProjects(adminKey) {
         const params = new URLSearchParams({ admin_key: adminKey });

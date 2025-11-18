@@ -5,8 +5,7 @@ Routes du Dashboard (corrigé pour import circulaire)
 
 import logging
 from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException, Query, Body, Depends
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import JSONResponse
 
 from api_client import VocalyxAPIClient
 from config import Config
@@ -19,31 +18,34 @@ logger = logging.getLogger(__name__)
 
 dashboard_router = APIRouter()
 config = Config()
-templates = Jinja2Templates(directory=config.templates_dir)
+
+
+def ensure_admin_access(api_client: VocalyxAPIClient, token: str):
+    """Vérifie que l'utilisateur courant est administrateur."""
+    profile = api_client.get_user_profile(token)
+    if not profile.get("is_admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return profile
 
 # ============================================================================
 # PAGES HTML
 # ============================================================================
-
-@dashboard_router.get("/dashboard", response_class=HTMLResponse, tags=["Dashboard"])
-async def dashboard_page(request: Request):
-    """Page principale du dashboard"""
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "api_url": config.api_url,
-        "admin_project_name": config.admin_project_name
-    })
 
 # ============================================================================
 # PROJETS
 # ============================================================================
 
 @dashboard_router.get("/api/projects", tags=["Projects"])
-async def list_projects(request: Request, admin_key: str = Query(...)):
+async def list_projects(
+    request: Request,
+    admin_key: str = Query(...),
+    token: str = Depends(get_current_token)
+):
     """Liste tous les projets (proxy vers l'API)"""
     api_client: VocalyxAPIClient = request.app.state.api_client
     
     try:
+        ensure_admin_access(api_client, token)
         projects = api_client.list_projects(admin_key)
         return JSONResponse(content=projects)
     except Exception as e:
@@ -54,12 +56,14 @@ async def list_projects(request: Request, admin_key: str = Query(...)):
 async def create_project(
     request: Request,
     project_name: str = Form(...),
-    admin_key: str = Form(...)
+    admin_key: str = Form(...),
+    token: str = Depends(get_current_token)
 ):
     """Crée un nouveau projet (proxy vers l'API)"""
     api_client: VocalyxAPIClient = request.app.state.api_client
     
     try:
+        ensure_admin_access(api_client, token)
         project = api_client.create_project(project_name, admin_key)
         return JSONResponse(content=project, status_code=201)
     except Exception as e:
@@ -70,21 +74,67 @@ async def create_project(
 async def get_project_details(
     request: Request,
     project_name: str,
-    admin_key: str = Query(...)
+    admin_key: str = Query(...),
+    token: str = Depends(get_current_token)
 ):
     """Récupère les détails d'un projet (proxy vers l'API)"""
     api_client: VocalyxAPIClient = request.app.state.api_client
     
     try:
+        ensure_admin_access(api_client, token)
         project = api_client.get_project_details(project_name, admin_key)
         return JSONResponse(content=project)
     except Exception as e:
         logger.error(f"Error getting project details: {e}")
         raise HTTPException(status_code=404, detail=str(e))
 
+@dashboard_router.get("/api/user/projects", tags=["Projects"])
+async def list_user_projects_proxy(
+    request: Request,
+    token: str = Depends(get_current_token)
+):
+    """Liste les projets accessibles par l'utilisateur courant."""
+    api_client: VocalyxAPIClient = request.app.state.api_client
+    try:
+        projects = api_client.get_user_projects(token)
+        return JSONResponse(content=projects)
+    except Exception as e:
+        logger.error(f"Error getting user projects: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ============================================================================
 # TRANSCRIPTIONS
 # ============================================================================
+
+@dashboard_router.post("/api/upload", tags=["Transcriptions"])
+async def upload_audio(
+    request: Request,
+    file: UploadFile = File(...),
+    project_name: str = Form(...),
+    api_key: str = Form(...),
+    use_vad: bool = Form(True),
+    token: str = Depends(get_current_token)
+):
+    """Upload un fichier audio pour transcription (proxy vers l'API)"""
+    api_client: VocalyxAPIClient = request.app.state.api_client
+    
+    try:
+        # Lire le contenu du fichier
+        file_content = await file.read()
+        filename = file.filename or "audio.wav"
+        
+        # Appeler l'API pour créer la transcription
+        result = await api_client.create_transcription(
+            project_name=project_name,
+            api_key=api_key,
+            file_content=file_content,
+            filename=filename,
+            use_vad=use_vad
+        )
+        return JSONResponse(content=result, status_code=201)
+    except Exception as e:
+        logger.error(f"Error uploading audio: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @dashboard_router.get("/api/transcriptions/recent", tags=["Transcriptions"])
 async def get_recent_transcriptions(
@@ -100,9 +150,8 @@ async def get_recent_transcriptions(
     api_client: VocalyxAPIClient = request.app.state.api_client
     
     try:
-        # ✅ MODIFICATION : Utiliser la clé interne au lieu du JWT
-        # Car l'API backend attend X-Internal-Key pour ces routes
-        transcriptions = api_client.get_transcriptions(
+        transcriptions = api_client.get_user_transcriptions(
+            jwt_token=token,
             page=page,
             limit=limit,
             status=status,
@@ -126,7 +175,8 @@ async def count_transcriptions(
     api_client: VocalyxAPIClient = request.app.state.api_client
     
     try:
-        count = api_client.count_transcriptions(
+        count = api_client.count_user_transcriptions(
+            jwt_token=token,
             status=status,
             project=project,
             search=search
@@ -146,7 +196,7 @@ async def get_transcription(
     api_client: VocalyxAPIClient = request.app.state.api_client
     
     try:
-        transcription = api_client.get_transcription(transcription_id)
+        transcription = api_client.get_user_transcription(jwt_token=token, transcription_id=transcription_id)
         return JSONResponse(content=transcription)
     except Exception as e:
         logger.error(f"Error getting transcription: {e}")
@@ -162,6 +212,7 @@ async def delete_transcription(
     api_client: VocalyxAPIClient = request.app.state.api_client
     
     try:
+        ensure_admin_access(api_client, token)
         result = api_client.delete_transcription(transcription_id)
         return JSONResponse(content=result)
     except Exception as e:
@@ -181,6 +232,7 @@ async def get_workers_status(
     api_client: VocalyxAPIClient = request.app.state.api_client
     
     try:
+        ensure_admin_access(api_client, token)
         status = api_client.get_workers_status()
         return JSONResponse(content=status)
     except Exception as e:

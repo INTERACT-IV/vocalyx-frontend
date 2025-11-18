@@ -18,24 +18,28 @@ function attachRowClickEvents() {
             
             const id = row.dataset.id;
             openModal();
-            modalBody.innerHTML = `
-                <div style="text-align:center;padding:2rem;">
-                    <div class="spinner"></div>
-                    <p>Chargement des détails...</p>
-                </div>
-            `;
+            if (modalBody) {
+                modalBody.innerHTML = `
+                    <div style="text-align:center;padding:2rem;">
+                        <div class="spinner"></div>
+                        <p>Chargement des détails...</p>
+                    </div>
+                `;
+            }
             
             try {
                 // ✅ Utilisation de l'API client
                 const data = await api.getTranscription(id);
                 renderTranscriptionModal(data);
             } catch (err) {
-                modalBody.innerHTML = `
-                    <div style="text-align:center;padding:2rem;color:red;">
-                        <p>❌ Erreur: ${err.message}</p>
-                        <button onclick="closeModal()" class="btn btn-danger">Fermer</button>
-                    </div>
-                `;
+                if (modalBody) {
+                    modalBody.innerHTML = `
+                        <div style="text-align:center;padding:2rem;color:red;">
+                            <p>❌ Erreur: ${err.message}</p>
+                            <button onclick="closeModal()" class="btn btn-danger">Fermer</button>
+                        </div>
+                    `;
+                }
             }
         });
     });
