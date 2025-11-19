@@ -110,6 +110,7 @@ if (uploadSubmitBtn) {
         const projectName = document.getElementById("upload-project-select")?.value;
         const apiKey = document.getElementById("upload-api-key-input")?.value;
         const useVad = document.getElementById("upload-use-vad")?.checked;
+        const useDiarization = document.getElementById("upload-use-diarization")?.checked;
 
         if (!projectName || !apiKey) {
             showToast("Projet ou Clé API manquant.", "warning");
@@ -121,7 +122,7 @@ if (uploadSubmitBtn) {
         
         try {
             // L'upload reste en HTTP, c'est normal
-            const result = await api.uploadAudio(file, projectName, apiKey, useVad);
+            const result = await api.uploadAudio(file, projectName, apiKey, useVad, useDiarization);
             
             showToast(`✅ Upload (Projet: ${projectName}) réussi !`, "success");
             

@@ -192,14 +192,16 @@ class VocalyxAPIClient:
         api_key: str,
         file_content: bytes,
         filename: str,
-        use_vad: bool = True
+        use_vad: bool = True,
+        diarization: bool = False
     ) -> Dict[str, Any]:
         """Crée une nouvelle transcription"""
         try:
             files = {"file": (filename, file_content)}
             data = {
                 "project_name": project_name,
-                "use_vad": str(use_vad).lower()
+                "use_vad": str(use_vad).lower(),
+                "diarization": str(diarization).lower()
             }
             headers = {"X-API-Key": api_key}
             

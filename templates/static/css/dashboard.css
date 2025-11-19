@@ -679,6 +679,7 @@ body {
     padding: 0;
     overflow: hidden;
     flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
 }
@@ -1229,7 +1230,7 @@ button:focus, [tabindex="0"]:focus {
 .modal-tab-content {
   display: none;
   padding: 1.25rem 1.5rem;
-  overflow-y: auto;
+  overflow: hidden;
   flex: 1;
   min-height: 0;
 }
@@ -1737,12 +1738,13 @@ button:focus, [tabindex="0"]:focus {
 .json-view-content {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 1rem;
   min-height: 0;
+  position: relative;
 }
 .text-view-content pre,
 .json-view-content pre {
@@ -1762,5 +1764,7 @@ button:focus, [tabindex="0"]:focus {
   word-wrap: break-word;
   overflow-wrap: break-word;
   max-width: 100%;
-  overflow-x: auto;
+  margin: 0;
+  padding: 0;
+  display: block;
 }
