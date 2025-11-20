@@ -95,6 +95,75 @@ if (openUploadBtn) {
     });
 }
 
+// Gestion du curseur de qualité
+const qualitySlider = document.getElementById("upload-quality-slider");
+const qualityLabels = document.querySelectorAll(".quality-label");
+const qualityValueDisplay = document.getElementById("quality-value-display");
+
+if (qualitySlider) {
+    const qualityModels = ["tiny", "base", "small", "medium"];
+    const qualityNames = ["Tiny", "Base", "Small", "Medium"];
+    
+    function updateQualityDisplay(value) {
+        const index = parseInt(value);
+        const modelName = qualityNames[index];
+        
+        // Mettre à jour l'affichage
+        if (qualityValueDisplay) {
+            qualityValueDisplay.textContent = modelName;
+        }
+        
+        // Mettre à jour les labels actifs
+        qualityLabels.forEach((label, idx) => {
+            if (idx === index) {
+                label.classList.add("active");
+            } else {
+                label.classList.remove("active");
+            }
+        });
+        
+        // Mettre à jour la couleur du curseur selon la position
+        // Gradient simple du vert (tiny) au rouge (medium)
+        const colors = [
+            "#10b981",  // Tiny - vert
+            "#3b82f6",  // Base - bleu
+            "#f59e0b",  // Small - orange
+            "#ef4444"   // Medium - rouge
+        ];
+        
+        // Calculer le gradient : montrer la couleur jusqu'à la position actuelle
+        const maxIndex = qualityModels.length - 1;
+        const percentage = (index / maxIndex) * 100;
+        
+        // Créer un gradient qui va du début jusqu'à la position actuelle avec la couleur correspondante
+        const currentColor = colors[index];
+        const nextColor = index < maxIndex ? colors[index + 1] : colors[index];
+        
+        // Gradient simple : couleur jusqu'à la position, gris après
+        qualitySlider.style.background = `linear-gradient(to right, 
+            ${currentColor} 0%, 
+            ${currentColor} ${percentage}%, 
+            #e2e8f0 ${percentage}%, 
+            #e2e8f0 100%)`;
+    }
+    
+    // Événement sur le curseur
+    qualitySlider.addEventListener("input", (e) => {
+        updateQualityDisplay(e.target.value);
+    });
+    
+    // Événements sur les labels (cliquables)
+    qualityLabels.forEach((label, index) => {
+        label.addEventListener("click", () => {
+            qualitySlider.value = index;
+            updateQualityDisplay(index);
+        });
+    });
+    
+    // Initialisation
+    updateQualityDisplay(qualitySlider.value);
+}
+
 // Logique d'upload (bouton "Soumettre" de la modale)
 const uploadSubmitBtn = document.getElementById("upload-submit-btn");
 if (uploadSubmitBtn) {
@@ -111,6 +180,12 @@ if (uploadSubmitBtn) {
         const apiKey = document.getElementById("upload-api-key-input")?.value;
         const useVad = document.getElementById("upload-use-vad")?.checked;
         const useDiarization = document.getElementById("upload-use-diarization")?.checked;
+        
+        // Récupérer la qualité sélectionnée
+        const qualitySlider = document.getElementById("upload-quality-slider");
+        const qualityValue = qualitySlider?.value || "2";
+        const qualityModels = ["tiny", "base", "small", "medium"];
+        const whisperModel = qualityModels[parseInt(qualityValue)] || "small";
 
         if (!projectName || !apiKey) {
             showToast("Projet ou Clé API manquant.", "warning");
@@ -122,7 +197,7 @@ if (uploadSubmitBtn) {
         
         try {
             // L'upload reste en HTTP, c'est normal
-            const result = await api.uploadAudio(file, projectName, apiKey, useVad, useDiarization);
+            const result = await api.uploadAudio(file, projectName, apiKey, useVad, useDiarization, whisperModel);
             
             showToast(`✅ Upload (Projet: ${projectName}) réussi !`, "success");
             

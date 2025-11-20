@@ -114,6 +114,7 @@ async def upload_audio(
     api_key: str = Form(...),
     use_vad: bool = Form(True),
     diarization: bool = Form(False),
+    whisper_model: str = Form("small"),
     token: str = Depends(get_current_token)
 ):
     """Upload un fichier audio pour transcription (proxy vers l'API)"""
@@ -131,7 +132,8 @@ async def upload_audio(
             file_content=file_content,
             filename=filename,
             use_vad=use_vad,
-            diarization=diarization
+            diarization=diarization,
+            whisper_model=whisper_model
         )
         return JSONResponse(content=result, status_code=201)
     except Exception as e:

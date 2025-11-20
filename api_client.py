@@ -193,7 +193,8 @@ class VocalyxAPIClient:
         file_content: bytes,
         filename: str,
         use_vad: bool = True,
-        diarization: bool = False
+        diarization: bool = False,
+        whisper_model: str = "small"
     ) -> Dict[str, Any]:
         """Crée une nouvelle transcription"""
         try:
@@ -201,7 +202,8 @@ class VocalyxAPIClient:
             data = {
                 "project_name": project_name,
                 "use_vad": str(use_vad).lower(),
-                "diarization": str(diarization).lower()
+                "diarization": str(diarization).lower(),
+                "whisper_model": whisper_model
             }
             headers = {"X-API-Key": api_key}
             

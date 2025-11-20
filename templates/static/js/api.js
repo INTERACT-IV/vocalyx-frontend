@@ -195,13 +195,14 @@ class VocalyxDashboardAPI {
     // TRANSCRIPTIONS
     // ========================================================================
     
-    async uploadAudio(file, projectName, apiKey, useVad = true, useDiarization = false) {
+    async uploadAudio(file, projectName, apiKey, useVad = true, useDiarization = false, whisperModel = 'small') {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('project_name', projectName);
         formData.append('api_key', apiKey);
         formData.append('use_vad', useVad);
         formData.append('diarization', useDiarization);
+        formData.append('whisper_model', whisperModel);
         
         // NOTE: Cet endpoint n'est pas dans l'API, il doit être dans routes.py
         // Vérifions routes.py... il n'y a pas de /api/upload.
