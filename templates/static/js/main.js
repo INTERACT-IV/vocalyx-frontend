@@ -518,35 +518,118 @@ function updateWorkerHeader(stats) {
 }
 
 /**
- * Rafraîchit la grille des transcriptions
+ * Met à jour une transcription spécifique dans l'UI sans rafraîchir toute la liste
+ */
+function updateTranscriptionInUI(transcription) {
+    const container = document.getElementById("grid-table-body");
+    if (!container) return;
+    
+    const row = container.querySelector(`tr[data-id="${transcription.id}"]`);
+    if (row) {
+        // La transcription est visible, mettre à jour la ligne
+        row.className = `status-${transcription.status || 'unknown'}`;
+        
+        // Mettre à jour le statut
+        const statusCell = row.querySelector('.col-status');
+        if (statusCell) {
+            statusCell.innerHTML = statusToBadge(transcription.status);
+        }
+        
+        // Mettre à jour les autres champs si nécessaire
+        const instanceCell = row.querySelector('.col-instance');
+        if (instanceCell && transcription.worker_id) {
+            instanceCell.textContent = transcription.worker_id;
+        }
+        
+        const langCell = row.querySelector('.col-lang');
+        if (langCell && transcription.language) {
+            langCell.textContent = transcription.language;
+        }
+        
+        const durationCell = row.querySelector('.col-duree');
+        if (durationCell && transcription.duration !== undefined) {
+            durationCell.textContent = transcription.duration ? transcription.duration.toFixed(1) + 's' : '-';
+        }
+        
+        const processCell = row.querySelector('.col-process');
+        if (processCell && transcription.processing_time !== undefined) {
+            processCell.textContent = transcription.processing_time ? transcription.processing_time.toFixed(1) + 's' : '-';
+        }
+        
+        console.log(`✅ Transcription ${transcription.id} mise à jour dans l'UI`);
+    } else {
+        // La transcription n'est pas visible (peut-être filtrée ou sur une autre page)
+        // Vérifier si elle devrait être visible avec les filtres actuels
+        const status = document.getElementById("status-filter")?.value || null;
+        const project = document.getElementById("project-filter")?.value || null;
+        const search = document.getElementById("search-input")?.value || null;
+        
+        // Si les filtres correspondent, rafraîchir la page actuelle
+        const matchesFilters = (!status || transcription.status === status) &&
+                              (!project || transcription.project_name === project) &&
+                              (!search || transcription.id.includes(search) || 
+                                      (transcription.text && transcription.text.includes(search)));
+        
+        if (matchesFilters) {
+            // La transcription devrait être visible, rafraîchir la page
+            console.log(`🔄 Transcription ${transcription.id} devrait être visible, rafraîchissement...`);
+            requestDashboardUpdate(currentPage);
+        } else {
+            // La transcription est filtrée, juste mettre à jour les compteurs si nécessaire
+            console.log(`ℹ️ Transcription ${transcription.id} filtrée, pas de mise à jour UI`);
+        }
+    }
+}
+
+/**
+ * Rafraîchit la grille des transcriptions via WebSocket uniquement
  */
 async function refreshTranscriptions(page = 1, limit = 25) {
-    console.log("🔄 refreshTranscriptions called:", { page, limit });
-    
-    const status = document.getElementById("status-filter")?.value || null;
-    const search = document.getElementById("search-input")?.value || null;
-    const project = document.getElementById("project-filter")?.value || null;
-    
-    console.log("📋 Filters:", { status, search, project });
+    console.log("🔄 refreshTranscriptions called (via WebSocket):", { page, limit });
     
     currentPage = page;
     currentLimit = limit;
     
     try {
-        const filters = {};
-        if (status) filters.status = status;
-        if (search) filters.search = search;
-        if (project) filters.project = project;
+        // Vérifier que le WebSocket est connecté
+        if (!api.websocket || api.websocket.readyState !== WebSocket.OPEN) {
+            console.warn("⚠️ WebSocket non connecté, attente de la connexion...");
+            // Attendre jusqu'à 5 secondes que le WebSocket se connecte
+            let attempts = 0;
+            while ((!api.websocket || api.websocket.readyState !== WebSocket.OPEN) && attempts < 50) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            if (!api.websocket || api.websocket.readyState !== WebSocket.OPEN) {
+                throw new Error("WebSocket non connecté après 5 secondes d'attente");
+            }
+            console.log("✅ WebSocket connecté, continuation...");
+        }
         
-        console.log("⏳ Fetching transcriptions...");
-        const transcriptions = await api.getTranscriptions(page, limit, filters);
+        // Utiliser le WebSocket pour récupérer les données
+        console.log("⏳ Demande de données via WebSocket...");
+        const state = await requestDashboardUpdate(page);
+        console.log("✅ Données reçues via WebSocket");
+        
+        if (!state) {
+            throw new Error("Aucune donnée reçue du serveur");
+        }
+        
+        // Extraire les données
+        const transcriptions = state.transcriptions || [];
+        const countData = state.transcription_count || {};
+        
         console.log("✅ Transcriptions received:", transcriptions.length, "items");
-        
-        console.log("⏳ Fetching count...");
-        const countData = await api.countTranscriptions(filters);
         console.log("✅ Count received:", countData);
         
-        const totalPages = Math.ceil(countData.total_filtered / limit);
+        const totalPages = Math.ceil((countData.total_filtered || 0) / limit);
+        
+        // Préparer les filtres pour l'affichage
+        const status = document.getElementById("status-filter")?.value || null;
+        const search = document.getElementById("search-input")?.value || null;
+        const project = document.getElementById("project-filter")?.value || null;
+        const filters = { status, search, project };
         
         console.log("🎨 Rendering transcriptions...");
         renderTranscriptions(transcriptions, countData, filters);
@@ -864,11 +947,24 @@ function attachDeleteEvents() {
 // GESTIONNAIRE WEBSOCKET
 // ============================================================================
 
+// Flag pour éviter les appels en double
+let pendingDashboardUpdate = false;
+// Promesses en attente pour les mises à jour
+let pendingDashboardUpdatePromise = null;
+let pendingDashboardUpdateResolve = null;
+
 /**
  * Fonction centralisée pour demander une mise à jour au WS
  * Utilise les filtres et la page actuels.
+ * Retourne une promesse qui se résout quand les données arrivent.
  */
 function requestDashboardUpdate(page = null) {
+    // Si une mise à jour est déjà en cours, retourner la même promesse
+    if (pendingDashboardUpdate && pendingDashboardUpdatePromise) {
+        console.log("⏭️ Mise à jour déjà en cours, réutilisation de la promesse");
+        return pendingDashboardUpdatePromise;
+    }
+    
     if (page) {
         currentPage = page;
     }
@@ -878,6 +974,23 @@ function requestDashboardUpdate(page = null) {
     const project = document.getElementById("project-filter")?.value || null;
 
     console.log(`WS -> C: Demande de mise à jour (Page: ${currentPage}, Filtres: ${status}, ${project}, ${search})`);
+    
+    pendingDashboardUpdate = true;
+    
+    // Créer une nouvelle promesse
+    pendingDashboardUpdatePromise = new Promise((resolve, reject) => {
+        pendingDashboardUpdateResolve = resolve;
+        
+        // Timeout après 10 secondes
+        setTimeout(() => {
+            if (pendingDashboardUpdate) {
+                pendingDashboardUpdate = false;
+                pendingDashboardUpdatePromise = null;
+                pendingDashboardUpdateResolve = null;
+                reject(new Error("Timeout: pas de réponse du serveur"));
+            }
+        }, 10000);
+    });
     
     api.sendWebSocketMessage({
         type: "get_dashboard_state",
@@ -890,12 +1003,17 @@ function requestDashboardUpdate(page = null) {
             view: currentView
         }
     });
+    
+    return pendingDashboardUpdatePromise;
 }
 
 /**
  * Gère les messages entrants du WebSocket
  * @param {object} msg - L'objet JSON reçu du serveur
  */
+// Flag pour indiquer si les données initiales ont déjà été chargées via HTTP
+let initialDataLoaded = false;
+
 function handleWebSocketMessage(msg) {
     
     let state; // Variable pour stocker les données d'état
@@ -903,13 +1021,38 @@ function handleWebSocketMessage(msg) {
     if (msg.type === "initial_dashboard_state") {
         // Cas 1: L'état initial complet à la connexion
         console.log("WS <- S: 📊 Données initiales (état complet) reçues");
+        initialDataLoaded = true;
         state = msg.data;
+        
+        // Résoudre la promesse en attente si elle existe (pour refreshTranscriptions)
+        if (pendingDashboardUpdateResolve) {
+            pendingDashboardUpdateResolve(state);
+            pendingDashboardUpdate = false;
+            pendingDashboardUpdatePromise = null;
+            pendingDashboardUpdateResolve = null;
+        }
     } else if (msg.type === "dashboard_state_update") {
         // Cas 2: Une mise à jour complète en réponse à notre demande
         console.log("WS <- S: 🔄 Mise à jour de l'état (filtré) reçue");
         state = msg.data;
+        
+        // Résoudre la promesse en attente si elle existe
+        if (pendingDashboardUpdateResolve) {
+            pendingDashboardUpdateResolve(state);
+            pendingDashboardUpdate = false;
+            pendingDashboardUpdatePromise = null;
+            pendingDashboardUpdateResolve = null;
+        }
+    } else if (msg.type === "transcription_updated") {
+        // Cas 3a: Une transcription spécifique a été mise à jour (données directes)
+        console.log("WS <- S: ✅ Transcription mise à jour reçue directement");
+        const updatedTranscription = msg.data?.transcription;
+        if (updatedTranscription) {
+            updateTranscriptionInUI(updatedTranscription);
+        }
+        return;
     } else if (msg.type === "transcription_update_trigger") {
-        // Cas 3: Un broadcast nous dit que "quelque chose" a changé
+        // Cas 3b: Un broadcast nous dit que "quelque chose" a changé (trigger général)
         console.log("WS <- S: 🔔 Trigger de mise à jour reçu. Demande des données...");
         // On demande une mise à jour avec nos filtres actuels
         requestDashboardUpdate(currentPage); 
@@ -962,7 +1105,7 @@ function handleWebSocketMessage(msg) {
 console.log("🚀 main.js loaded");
 
 // Initialisation au chargement de la page
-function setActiveView(view) {
+async function setActiveView(view) {
     const targetView = view || "transcriptions";
     // Vérifier les permissions pour les vues admin (sauf users qui affiche un message)
     const adminOnlyViews = ["projects", "workers"];
@@ -985,13 +1128,29 @@ function setActiveView(view) {
         }
     });
 
-    if (currentView === "users") {
+    // ✅ CHARGEMENT IMMÉDIAT selon la vue active
+    if (currentView === "transcriptions") {
+        console.log("⚡ Chargement immédiat des transcriptions...");
+        await refreshTranscriptions(currentPage, currentLimit);
+    } else if (currentView === "workers") {
+        console.log("⚡ Chargement immédiat des stats workers...");
+        try {
+            const stats = await api.getWorkersStatus();
+            updateWorkerHeader(stats);
+            renderWorkerMonitoringGrid(stats);
+        } catch (err) {
+            console.error("Erreur lors du chargement des workers:", err);
+        }
+    } else if (currentView === "users") {
         if (!window.VOCALYX_CONFIG?.USER_IS_ADMIN) {
             showToast("Accès réservé aux administrateurs. Contactez un administrateur pour gérer les comptes.", "warning");
             return;
         }
-        loadUsersList();
+        await loadUsersList();
+    } else if (currentView === "projects") {
+        await populateProjectFilters();
     }
+    
     let now = new Date();
     lastUpdateTime = now;
     const viewNames = {
@@ -1260,39 +1419,111 @@ document.addEventListener('DOMContentLoaded', async () => {
     viewWrappers = Array.from(document.querySelectorAll(".view-wrapper[data-view]"));
     
     navButtons.forEach(btn => {
-        btn.addEventListener("click", (event) => {
+        btn.addEventListener("click", async (event) => {
             event.preventDefault();
             const view = btn.dataset.view;
             if (!view || view === currentView) return;
-            setActiveView(view);
-            if (view === "projects") {
-                populateProjectFilters(); // rafraîchit la liste si besoin
-            }
-            requestDashboardUpdate();
+            await setActiveView(view);
+            // setActiveView charge déjà les données, pas besoin de requestDashboardUpdate
         });
     });
 
     quickViewButtons.forEach(btn => {
-        btn.addEventListener("click", (event) => {
+        btn.addEventListener("click", async (event) => {
             event.preventDefault();
             const view = btn.dataset.viewTarget;
             if (!view) return;
-            setActiveView(view);
-            requestDashboardUpdate();
+            await setActiveView(view);
+            // setActiveView charge déjà les données, pas besoin de requestDashboardUpdate
         });
     });
-    
-    setActiveView(currentView);
     
     console.log("🚀 Lancement du chargement des filtres projets...");
     await populateProjectFilters();
     console.log("✅ Filtres projets chargés.");
-
-    if (window.VOCALYX_CONFIG?.USER_IS_ADMIN && document.getElementById("users-list-container")) {
-        await loadUsersList();
-    }
     
-    requestDashboardUpdate();
+    // Démarrer la connexion WebSocket AVANT de charger les données
+    // Les données viendront uniquement du WebSocket
+    console.log("🔄 Connexion au WebSocket pour charger les données...");
+    
+    // Créer une promesse pour attendre que le WebSocket soit connecté
+    const wsConnectedPromise = new Promise((resolve, reject) => {
+        api.connectWebSocket(
+            handleWebSocketMessage, // Callback pour les messages
+            (error) => { // Callback pour les erreurs
+                console.error("Échec de la connexion WebSocket:", error);
+                reject(error);
+            },
+            () => {
+                console.log("🛰️ WebSocket connecté - chargement des données...");
+                resolve();
+            }
+        );
+    });
+    
+    try {
+        // Attendre que le WebSocket soit connecté
+        await wsConnectedPromise;
+        
+        // Le serveur envoie automatiquement initial_dashboard_state à la connexion
+        // On attend de recevoir ces données (elles seront traitées dans handleWebSocketMessage)
+        // Pour la vue active, on configure juste l'UI sans charger les données
+        // (les données viendront via initial_dashboard_state)
+        
+        // Configurer la vue active (sans charger les données)
+        const targetView = currentView || "transcriptions";
+        currentView = targetView;
+        document.body?.setAttribute("data-page", currentView);
+        
+        navButtons.forEach(btn => {
+            btn.classList.toggle("active", btn.dataset.view === currentView);
+        });
+        
+        viewWrappers.forEach(wrapper => {
+            if (wrapper.dataset.view === currentView) {
+                wrapper.classList.add("active");
+            } else {
+                wrapper.classList.remove("active");
+            }
+        });
+        
+        setContextBanner();
+        
+        // Les données seront chargées automatiquement via initial_dashboard_state
+        // qui sera traité dans handleWebSocketMessage
+        console.log("⏳ Attente des données initiales du serveur...");
+        
+        // Attendre un peu pour que initial_dashboard_state arrive
+        // (normalement il arrive immédiatement après la connexion)
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        console.log("✅ Initialization complete. Données chargées via WebSocket.");
+    } catch (err) {
+        console.error("❌ Erreur lors de la connexion WebSocket:", err);
+        showToast("Connexion WebSocket échouée. Tentative de chargement via HTTP...", "warning");
+        
+        // Fallback : utiliser HTTP si le WebSocket échoue
+        try {
+            const status = document.getElementById("status-filter")?.value || null;
+            const search = document.getElementById("search-input")?.value || null;
+            const project = document.getElementById("project-filter")?.value || null;
+            const filters = {};
+            if (status) filters.status = status;
+            if (search) filters.search = search;
+            if (project) filters.project = project;
+            
+            const transcriptions = await api.getTranscriptions(currentPage, currentLimit, filters);
+            const countData = await api.countTranscriptions(filters);
+            const totalPages = Math.ceil(countData.total_filtered / currentLimit);
+            
+            renderTranscriptions(transcriptions, countData, filters);
+            updatePagination(currentPage, totalPages);
+            initialDataLoaded = true;
+        } catch (httpErr) {
+            console.error("❌ Erreur lors du chargement HTTP:", httpErr);
+            showToast("Impossible de charger les données", "error");
+        }
+    }
     
     const refreshProjectsBtn = document.getElementById("refresh-projects-btn");
     if (refreshProjectsBtn) {
@@ -1355,21 +1586,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     
-    // Démarrer la connexion WebSocket
-    console.log("🔄 Connexion au WebSocket pour les données initiales et les mises à jour...");
-    api.connectWebSocket(
-        handleWebSocketMessage, // Callback pour les messages
-        (error) => { // Callback pour les erreurs
-            console.error("Échec de la connexion WebSocket initiale:", error);
-            showToast("Connexion temps réel échouée", "error");
-        },
-        () => {
-            console.log("🛰️ WS ouvert -> requête d'état initial");
-            requestDashboardUpdate();
-        }
-    );
-    
-    console.log("✅ Initialization complete. En attente des données WebSocket.");
 });
 
 // CTA HERO:"Nouvelle transcription" click event (ouvre la modale)

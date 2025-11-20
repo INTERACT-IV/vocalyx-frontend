@@ -68,7 +68,7 @@ function attachDeleteEvents() {
                 row.style.transform = "scale(0.95)";
                 
                 setTimeout(() => {
-                    refreshCards(currentPage, currentLimit);
+                    refreshTranscriptions(currentPage, currentLimit);
                 }, 300);
             } catch (err) {
                 showToast(`Erreur: ${err.message}`, "error");
@@ -78,90 +78,12 @@ function attachDeleteEvents() {
 }
 
 /**
- * Rafraîchit la grille avec les données
+ * Rafraîchit la grille avec les données via WebSocket
+ * Cette fonction délègue à refreshTranscriptions() qui utilise le WebSocket
  */
 async function refreshCards(page = 1, limit = currentLimit) {
-    const status = document.getElementById("status-filter")?.value || null;
-    const search = document.getElementById("search-input")?.value || null;
-    const project = document.getElementById("project-filter")?.value || null;
-    
-    currentPage = page;
-    currentLimit = limit;
-    
-    try {
-        // Préparer les filtres
-        const filters = {};
-        if (status) filters.status = status;
-        if (search) filters.search = search;
-        if (project) filters.project = project;
-        
-        // ✅ Utilisation de l'API client pour récupérer les transcriptions
-        const entries = await api.getTranscriptions(page, limit, filters);
-        
-        // ✅ Utilisation de l'API client pour récupérer le compte
-        const countData = await api.countTranscriptions(filters);
-        
-        const totalPages = Math.ceil(countData.total_filtered / limit);
-        
-        const container = document.getElementById("grid-table-body");
-        if (!container) return;
-        
-        container.innerHTML = "";
-        
-        if (entries.length === 0) {
-            container.innerHTML = `
-                <tr><td colspan="9" style="text-align:center;padding:2rem;">
-                    Aucune transcription trouvée.
-                </td></tr>
-            `;
-            updatePagination(page, 0);
-            return;
-        }
-        
-        const fragment = document.createDocumentFragment();
-        
-        entries.forEach((entry) => {
-            const row = document.createElement("tr");
-            row.className = `status-${entry.status || 'unknown'}`;
-            row.dataset.id = entry.id;
-            
-            row.innerHTML = `
-                <td class="col-status">
-                    <span class="status-indicator"></span>
-                    <span class="status-text">${escapeHtml(entry.status || '-')}</span>
-                </td>
-                <td class="col-project">${escapeHtml(entry.project_name || 'N/A')}</td>
-                <td class="col-id">${escapeHtml(entry.id)}</td>
-                <td class="col-instance">${escapeHtml(entry.worker_id || 'N/A')}</td>
-                <td class="col-lang">${escapeHtml(entry.language || '...')}</td>
-                <td class="col-duree">${entry.duration ? entry.duration.toFixed(1) + 's' : '-'}</td>
-                <td class="col-process">${entry.processing_time ? entry.processing_time.toFixed(1) + 's' : '-'}</td>
-                <td class="col-date">${formatHumanDate(entry.created_at)}</td>
-                <td class="col-actions">
-                    <button class="btn-delete btn btn-danger">Supprimer</button>
-                </td>
-            `;
-            
-            fragment.appendChild(row);
-        });
-        
-        container.appendChild(fragment);
-        attachRowClickEvents();
-        attachDeleteEvents();
-        updatePagination(page, totalPages);
-        
-    } catch (err) {
-        console.error("Erreur:", err);
-        const container = document.getElementById("grid-table-body");
-        if (container) {
-            container.innerHTML = `
-                <tr><td colspan="9" style="color:red;text-align:center;padding:2rem;">
-                    Erreur de chargement: ${err.message}<br>
-                    <small>Vérifiez que vocalyx-api est accessible.</small>
-                </td></tr>
-            `;
-        }
-    }
+    // Déléguer à refreshTranscriptions qui utilise maintenant le WebSocket
+    await refreshTranscriptions(page, limit);
 }
 
 /**
@@ -205,7 +127,7 @@ function createPageButton(page, text, isActive = false) {
     btn.dataset.page = page;
     if (isActive) btn.classList.add("active");
     btn.addEventListener("click", () => {
-        refreshCards(page, currentLimit);
+        refreshTranscriptions(page, currentLimit);
     });
     return btn;
 }
