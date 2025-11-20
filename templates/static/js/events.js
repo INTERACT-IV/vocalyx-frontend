@@ -102,7 +102,7 @@ const qualityValueDisplay = document.getElementById("quality-value-display");
 
 if (qualitySlider) {
     const qualityModels = ["tiny", "base", "small", "medium"];
-    const qualityNames = ["Tiny", "Base", "Small", "Medium"];
+    const qualityNames = ["Rapide", "Modéré", "Équilibré", "Haute"];
     
     function updateQualityDisplay(value) {
         const index = parseInt(value);
