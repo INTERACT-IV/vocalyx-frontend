@@ -16,7 +16,8 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 import uvicorn
 
 from config import Config
-from api_client import VocalyxAPIClient
+from api_client import VocalyxAPIClient  # Compatibilité
+from infrastructure.api.api_client import VocalyxAPIClient as VocalyxAPIClientRefactored
 from routes import dashboard_router
 from logging_config import setup_logging, setup_colored_logging, get_uvicorn_log_config
 
@@ -46,8 +47,8 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Démarrage de Vocalyx Dashboard")
     logger.info(f"🔗 API URL: {config.api_url}")
     
-    # Initialiser le client API
-    api_client = VocalyxAPIClient(config)
+    # Initialiser le client API (version refactorisée)
+    api_client = VocalyxAPIClientRefactored(config)
     
     # Vérifier la connexion à l'API
     health = api_client.health_check()

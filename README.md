@@ -1,169 +1,141 @@
-# vocalyx-frontend
+# Vocalyx Frontend
 
-Interface web pour la gestion des transcriptions audio Vocalyx.
+Interface web dashboard pour la gestion et le suivi des transcriptions audio.
 
-## 🎯 Rôle
+## Description
 
-- Interface utilisateur web intuitive
-- **Client HTTP pur** de `vocalyx-api` (aucun accès direct à la DB)
-- Gestion des projets et transcriptions
-- Monitoring des workers en temps réel
+Module frontend de Vocalyx fournissant une interface web complète pour l'administration des transcriptions, projets et utilisateurs. Communique avec l'API centrale via HTTP et WebSocket pour les mises à jour en temps réel.
 
-## 🏗️ Architecture
+## Architecture
+
+### Structure
 
 ```
 vocalyx-frontend/
-├── templates/
-│   ├── dashboard.html
-│   └── static/
-│       ├── css/
-│       │   └── dashboard.css
-│       └── js/
-│           ├── api.js          # Client API JavaScript
-│           ├── cards.js        # Gestion de la grille
-│           ├── events.js       # Événements utilisateur
-│           ├── main.js         # Point d'entrée
-│           ├── modal.js        # Gestion des modales
-│           ├── polling.js      # Polling des transcriptions
-│           └── utils.js        # Utilitaires
-├── app.py                      # Point d'entrée FastAPI
-├── api_client.py               # Client HTTP vers vocalyx-api
-├── config.py                   # Configuration
-├── routes.py                   # Routes du dashboard
-├── logging_config.py           # Configuration du logging
-├── requirements.txt
-├── Dockerfile
-└── config.ini
+├── api_client.py              # Client API (compatibilité)
+├── infrastructure/
+│   └── api/
+│       └── api_client.py      # Client API refactorisé
+├── application/
+│   └── services/              # Services applicatifs
+│       ├── auth_service.py
+│       ├── project_service.py
+│       ├── transcription_service.py
+│       └── user_service.py
+├── routes.py                  # Routes FastAPI
+├── auth_deps.py               # Dépendances d'authentification
+├── app.py                     # Point d'entrée FastAPI
+└── templates/                 # Templates HTML
+    ├── dashboard.html
+    ├── login.html
+    └── static/                # Assets statiques (CSS, JS)
 ```
 
-## 🚀 Installation
+### Fonctionnalités
 
-### Prérequis
+- **Dashboard** : Vue d'ensemble des transcriptions avec filtres et pagination
+- **Authentification** : Système de login avec cookies HttpOnly
+- **Gestion des transcriptions** : Upload, visualisation, suppression
+- **Administration** : Gestion des utilisateurs et projets
+- **Temps réel** : Mises à jour via WebSocket
+- **Interface responsive** : Design adaptatif
 
-- Python 3.10+
-- vocalyx-api en cours d'exécution
+## Dépendances principales
 
-### Installation locale
+### FastAPI
+Framework web pour servir l'interface HTML et gérer les routes. Utilisé également pour le rendu des templates Jinja2.
 
-```bash
-# Cloner le dépôt
-git clone <repository>
-cd vocalyx-frontend
+### Uvicorn
+Serveur ASGI pour exécuter l'application FastAPI. Gère les requêtes HTTP et les connexions WebSocket.
 
-# Créer un environnement virtuel
-python3.10 -m venv venv
-source venv/bin/activate  # Linux/Mac
+### Jinja2
+Moteur de templates pour générer les pages HTML. Utilisé pour le rendu des templates du dashboard.
 
-# Installer les dépendances
-pip install -r requirements.txt
+### httpx
+Client HTTP asynchrone pour communiquer avec l'API centrale. Supporte les requêtes synchrones et asynchrones.
 
-# Configurer
-cp config.ini config.local.ini
-# Éditer config.local.ini avec l'URL de votre API
+### python-multipart
+Support pour le parsing des formulaires multipart. Nécessaire pour l'upload de fichiers audio.
 
-# Lancer le frontend
-python app.py
+### python-dotenv
+Chargement des variables d'environnement depuis les fichiers `.env`. Utilisé pour la configuration.
+
+## Configuration
+
+Variables d'environnement principales :
+
+- `VOCALYX_API_URL` : URL de l'API centrale
+- `INTERNAL_API_KEY` : Clé pour la communication interne
+- `ADMIN_PROJECT_NAME` : Nom du projet administrateur
+- `LOG_LEVEL` : Niveau de logging
+- `LOG_FILE_PATH` : Chemin du fichier de logs
+
+## Routes principales
+
+### Pages HTML
+- `GET /` : Page d'accueil (redirige vers le dashboard)
+- `GET /dashboard` : Dashboard principal
+- `GET /admin` : Interface d'administration
+- `GET /login` : Page de connexion
+
+### Authentification
+- `POST /auth/login` : Connexion utilisateur
+- `GET /auth/logout` : Déconnexion
+- `GET /auth/get-token` : Récupération du token pour WebSocket
+
+### API Proxy
+Le frontend fait office de proxy pour certaines routes de l'API :
+- Gestion des transcriptions
+- Gestion des projets
+- Gestion des utilisateurs (admin)
+- Statut des workers
+
+## Authentification
+
+Système d'authentification basé sur :
+- Cookies HttpOnly pour stocker le token JWT
+- Vérification du token via dépendance FastAPI
+- Redirection automatique vers `/login` si non authentifié
+- Support des utilisateurs administrateurs
+
+## Interface utilisateur
+
+### Dashboard
+- Liste des transcriptions avec filtres (statut, projet, recherche)
+- Pagination des résultats
+- Statistiques en temps réel (workers, transcriptions)
+- Actions : visualiser, télécharger, supprimer
+
+### Administration
+- Gestion des utilisateurs (création, modification, suppression)
+- Attribution de projets aux utilisateurs
+- Gestion des projets
+
+### Upload
+- Interface d'upload de fichiers audio
+- Configuration des options (VAD, diarisation, modèle Whisper)
+- Suivi de la progression via WebSocket
+
+## WebSocket
+
+Le frontend se connecte à l'API via WebSocket pour :
+- Recevoir les mises à jour de transcriptions en temps réel
+- Mettre à jour les statistiques des workers
+- Rafraîchir automatiquement le dashboard
+
+## Assets statiques
+
+Les fichiers statiques (CSS, JavaScript) sont servis via FastAPI :
+- `static/css/` : Feuilles de style
+- `static/js/` : Scripts JavaScript pour l'interactivité
+
+## Logs
+
+Les logs sont écrits dans `./shared/logs/vocalyx-frontend.log` avec le format :
+
+```
+%(asctime)s [%(levelname)s] %(name)s: %(message)s
 ```
 
-Le Dashboard sera accessible sur http://localhost:8080
+Voir `DOCUMENTATION_LOGS.md` pour la documentation complète des logs.
 
-## 🐳 Docker
-
-```bash
-# Build
-docker build -t vocalyx-frontend .
-
-# Run
-docker run -p 8080:8080 \
-  -e VOCALYX_API_URL="http://vocalyx-api:8000" \
-  vocalyx-frontend
-```
-
-## 📡 Fonctionnalités
-
-### ✅ Gestion des Projets
-- Créer de nouveaux projets
-- Lister tous les projets
-- Récupérer les clés API
-
-### ✅ Gestion des Transcriptions
-- Upload de fichiers audio
-- Visualisation en grille
-- Filtrage (statut, projet, recherche)
-- Pagination
-- Détails complets avec segments
-- Suppression
-
-### ✅ Monitoring
-- Statut des workers Celery en temps réel
-- Statistiques des transcriptions
-- Polling automatique
-
-## 🔒 Sécurité
-
-### Communication avec l'API
-
-Le frontend utilise une clé interne (`X-Internal-Key`) pour communiquer avec vocalyx-api.
-
-```ini
-[SECURITY]
-internal_api_key = SECRET_KEY_HERE
-```
-
-**⚠️ Cette clé DOIT être identique à celle configurée dans vocalyx-api.**
-
-### Flux d'Authentification
-
-1. **Upload** : Frontend → API (avec clé projet de l'utilisateur)
-2. **Lecture** : Frontend → API (avec clé interne)
-3. **Admin** : Frontend → API (avec clé projet admin)
-
-## ⚙️ Configuration
-
-Voir `config.ini` pour toutes les options disponibles.
-
-### Variables d'Environnement (optionnel)
-
-```bash
-VOCALYX_API_URL=http://vocalyx-api:8000
-INTERNAL_API_KEY=your_secret_key
-```
-
-## 📊 Monitoring
-
-- **Logs**: `logs/vocalyx-frontend.log`
-- **Health Check**: `GET /health`
-
-## 🎨 Interface Utilisateur
-
-L'interface propose :
-
-- **Dashboard principal** : Vue d'ensemble des transcriptions
-- **Filtres avancés** : Par statut, projet, recherche texte
-- **Monitoring workers** : Affichage en temps réel
-- **Modales** :
-  - Upload de fichiers audio
-  - Gestion des projets
-  - Détails des transcriptions avec segments
-
-## 🔄 Polling
-
-Le dashboard poll automatiquement :
-- Les transcriptions toutes les 5 secondes
-- Les workers toutes les 5 secondes
-
-Le polling s'arrête automatiquement quand :
-- Une modale est ouverte
-- L'onglet est en arrière-plan
-
-## 📝 Changelog
-
-### Version 1.0.0
-- Architecture microservices (client API pur)
-- Plus d'accès direct à la base de données
-- Communication HTTP avec vocalyx-api
-- Interface modernisée
-
-## 📄 Licence
-
-Propriétaire - Guilhem RICHARD
