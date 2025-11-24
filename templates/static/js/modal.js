@@ -87,6 +87,11 @@ function renderTranscriptionModal(data) {
             <button class="modal-tab active" data-tab="summary">
                 <span style="margin-right:0.5rem;">📋</span>Résumé
             </button>
+            ${data.enrichment_requested && data.enrichment_data ? `
+            <button class="modal-tab" data-tab="enrichment">
+                <span style="margin-right:0.5rem;">✨</span>Enrichissement
+            </button>
+            ` : ''}
             <button class="modal-tab" data-tab="segments">
                 <span style="margin-right:0.5rem;">🎬</span>Segments
             </button>
@@ -118,6 +123,12 @@ function renderTranscriptionModal(data) {
                         <span class="info-label">Worker:</span>
                         <span class="info-value">${escapeHtml(data.worker_id || 'N/A')}</span>
                     </div>
+                    ${data.enrichment_worker_id ? `
+                    <div class="info-item">
+                        <span class="info-label">Worker Enrichissement:</span>
+                        <span class="info-value">${escapeHtml(data.enrichment_worker_id)}</span>
+                    </div>
+                    ` : ''}
                 </div>
                 
                 <div class="info-section">
@@ -143,9 +154,33 @@ function renderTranscriptionModal(data) {
                         <span class="info-value highlight-value">${data.duration ? formatDuration(data.duration) : '-'}</span>
                     </div>
                     <div class="info-item">
-                        <span class="info-label">Temps traitement:</span>
+                        <span class="info-label">Temps de transcription:</span>
                         <span class="info-value highlight-value">${data.processing_time ? formatDuration(data.processing_time) : '-'}</span>
                     </div>
+                    ${data.enrichment_requested ? `
+                    <div class="info-item">
+                        <span class="info-label">Temps d'enrichissement total:</span>
+                        <span class="info-value highlight-value">${data.enrichment_data && data.enrichment_data.timing && data.enrichment_data.timing.total_time ? formatDuration(data.enrichment_data.timing.total_time) : (data.enrichment_processing_time ? formatDuration(data.enrichment_processing_time) : '-')}</span>
+                    </div>
+                    ${data.enrichment_data && data.enrichment_data.timing ? `
+                    <div class="info-item" style="margin-left: 1rem; padding-left: 0.5rem; border-left: 2px solid #4a90e2;">
+                        <span class="info-label" style="font-size: 0.9rem; color: #64748b;">• Temps de génération du résumé:</span>
+                        <span class="info-value" style="font-size: 0.9rem;">${formatDuration(data.enrichment_data.timing.summary_time || 0)}</span>
+                    </div>
+                    <div class="info-item" style="margin-left: 1rem; padding-left: 0.5rem; border-left: 2px solid #4a90e2;">
+                        <span class="info-label" style="font-size: 0.9rem; color: #64748b;">• Temps de génération du titre:</span>
+                        <span class="info-value" style="font-size: 0.9rem;">${formatDuration(data.enrichment_data.timing.title_time || 0)}</span>
+                    </div>
+                    <div class="info-item" style="margin-left: 1rem; padding-left: 0.5rem; border-left: 2px solid #4a90e2;">
+                        <span class="info-label" style="font-size: 0.9rem; color: #64748b;">• Temps de génération du bullet point:</span>
+                        <span class="info-value" style="font-size: 0.9rem;">${formatDuration(data.enrichment_data.timing.bullet_points_time || 0)}</span>
+                    </div>
+                    <div class="info-item" style="margin-left: 1rem; padding-left: 0.5rem; border-left: 2px solid #4a90e2;">
+                        <span class="info-label" style="font-size: 0.9rem; color: #64748b;">• Temps de génération du score de satisfaction:</span>
+                        <span class="info-value" style="font-size: 0.9rem;">${formatDuration(data.enrichment_data.timing.satisfaction_time || 0)}</span>
+                    </div>
+                    ` : ''}
+                    ` : ''}
                     <div class="info-item">
                         <span class="info-label">Segments:</span>
                         <span class="info-value">${data.segments_count || 0}</span>
@@ -171,6 +206,79 @@ function renderTranscriptionModal(data) {
             </div>
             ` : ''}
         </div>
+        
+        ${data.enrichment_requested ? `
+        <div class="modal-tab-content" data-content="enrichment">
+            <div class="enrichment-container">
+                ${data.enrichment_status === 'done' && data.enrichment_data ? `
+                <div class="enrichment-section">
+                    <h3 class="enrichment-title">📊 Résultats de l'enrichissement</h3>
+                    
+                    ${data.enrichment_data.timing ? `
+                    <div class="enrichment-timing-info">
+                        <strong>⏱️ Temps d'enrichissement :</strong>
+                        <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                            <li>Titre : ${data.enrichment_data.timing.title_time || 0}s</li>
+                            <li>Résumé : ${data.enrichment_data.timing.summary_time || 0}s</li>
+                            <li>Score de satisfaction : ${data.enrichment_data.timing.satisfaction_time || 0}s</li>
+                            <li>Bullet points : ${data.enrichment_data.timing.bullet_points_time || 0}s</li>
+                            <li><strong>Total : ${data.enrichment_data.timing.total_time || data.enrichment_processing_time || 0}s</strong></li>
+                        </ul>
+                    </div>
+                    ` : data.enrichment_processing_time ? `
+                    <div class="enrichment-timing-info">
+                        <strong>⏱️ Temps d'enrichissement total :</strong> ${data.enrichment_processing_time.toFixed(2)}s
+                    </div>
+                    ` : ''}
+                    
+                    <div class="enrichment-item">
+                        <h4>📝 Titre${data.enrichment_data.timing ? ` <small style="color:#64748b;">(${data.enrichment_data.timing.title_time || 0}s)</small>` : ''}</h4>
+                        <div class="enrichment-value">${escapeHtml(data.enrichment_data.title || 'N/A')}</div>
+                    </div>
+                    
+                    <div class="enrichment-item">
+                        <h4>📄 Résumé${data.enrichment_data.timing ? ` <small style="color:#64748b;">(${data.enrichment_data.timing.summary_time || 0}s)</small>` : ''}</h4>
+                        <div class="enrichment-value">${escapeHtml(data.enrichment_data.summary || 'N/A')}</div>
+                    </div>
+                    
+                    <div class="enrichment-item">
+                        <h4>⭐ Score de satisfaction${data.enrichment_data.timing ? ` <small style="color:#64748b;">(${data.enrichment_data.timing.satisfaction_time || 0}s)</small>` : ''}</h4>
+                        <div class="satisfaction-score">
+                            <div class="score-value">${data.enrichment_data.satisfaction_score || 'N/A'}/10</div>
+                        </div>
+                    </div>
+                    
+                    <div class="enrichment-item">
+                        <h4>🔹 Points clés${data.enrichment_data.timing ? ` <small style="color:#64748b;">(${data.enrichment_data.timing.bullet_points_time || 0}s)</small>` : ''}</h4>
+                        <ul class="bullet-points">
+                            ${(data.enrichment_data.bullet_points || []).map(point => `<li>${escapeHtml(point)}</li>`).join('') || '<li>Aucun point clé disponible</li>'}
+                        </ul>
+                    </div>
+                </div>
+                ` : data.enrichment_status === 'processing' ? `
+                <div class="enrichment-status">
+                    <div class="loading-spinner"></div>
+                    <p>⏳ Enrichissement en cours...</p>
+                    <small>Worker: ${escapeHtml(data.enrichment_worker_id || 'N/A')}</small>
+                </div>
+                ` : data.enrichment_status === 'error' ? `
+                <div class="error-box">
+                    <strong>❌ Erreur d'enrichissement:</strong> ${escapeHtml(data.enrichment_error || 'Erreur inconnue')}
+                </div>
+                ` : `
+                <div class="enrichment-status">
+                    <p>⏳ Enrichissement en attente...</p>
+                </div>
+                `}
+                
+                ${data.llm_model ? `
+                <div class="enrichment-metadata">
+                    <small>Modèle LLM utilisé: <code>${escapeHtml(data.llm_model)}</code></small>
+                </div>
+                ` : ''}
+            </div>
+        </div>
+        ` : ''}
         
         <div class="modal-tab-content" data-content="segments">
             <div class="segments-layout">
@@ -207,7 +315,7 @@ function renderTranscriptionModal(data) {
                 <div class="json-view-header">
                     <h3>JSON brut</h3>
                     <div class="json-view-actions">
-                        <a href="/transcribe/${data.id}" target="_blank" class="btn btn-primary">🔗 Voir le JSON</a>
+                        <button onclick="navigator.clipboard.writeText(JSON.stringify(currentTranscriptionData, null, 2)).then(() => { showToast ? showToast('JSON copié dans le presse-papiers', 'success') : alert('JSON copié'); }).catch(() => { alert('Erreur lors de la copie'); })" class="btn btn-primary">📋 Copier JSON</button>
                         <button class="btn btn-success" id="json-copy-btn">📋 Copier</button>
                     </div>
                 </div>

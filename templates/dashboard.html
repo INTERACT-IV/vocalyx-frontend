@@ -32,6 +32,7 @@
                     <option value="">Tous</option>
                     <option value="pending">En attente</option>
                     <option value="processing">En cours</option>
+                    <option value="transcribed">Transcrit</option>
                     <option value="done">Terminé</option>
                     <option value="error">Erreur</option>
                 </select>
@@ -64,16 +65,19 @@
                         <th class="col-status">Statut</th>
                         <th class="col-project">Projet</th>
                         <th class="col-id">ID</th>
-                        <th class="col-instance">Instance</th>
+                        <th class="group-header" colspan="2">Workers</th>
                         <th class="col-lang">Langue</th>
                         <th class="group-header" colspan="2">Temps</th>
                         <th class="col-date">Créé le</th>
                         <th class="col-actions">Actions</th>
                     </tr>
                     <tr>
-                        <th></th><th></th><th></th><th></th><th></th>
+                        <th></th><th></th><th></th>
+                        <th class="col-worker-transcribe" title="Worker de transcription">Transcription</th>
+                        <th class="col-worker-enrichment" title="Worker d'enrichissement">Enrichissement</th>
+                        <th></th>
                         <th class="col-duree dur-group" title="Durée totale de l'audio en secondes">Durée</th>
-                        <th class="col-process dur-group" title="Temps de traitement en secondes">Traitement</th>
+                        <th class="col-process dur-group" title="Temps de traitement total (transcription + enrichissement) en secondes">Traitement</th>
                         <th></th><th></th>
                     </tr>
                 </thead>
@@ -225,6 +229,7 @@
                 <thead>
                     <tr>
                         <th class="col-instance">Instance</th>
+                        <th class="col-type">Type</th>
                         <th class="col-status">Statut</th>
                         <th class="col-charge-num">Charge (Nb)</th>
                         <th class="col-charge-bar">Charge %</th>
@@ -295,7 +300,7 @@
 </div>
 
 <div id="upload-modal" class="modal">
-    <div class="modal-content" style="max-width: 550px;">
+    <div class="modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
         <span class="close" id="upload-modal-close">&times;</span>
         <div class="upload-modal-body">
             <h2>Nouvelle Transcription</h2>
@@ -357,12 +362,53 @@
                     </div>
                     <div class="quality-value-display" id="quality-value-display">Équilibré</div>
                 </div>
-                <br><br>
-                <input type="checkbox" id="upload-use-vad" checked>
-                <label for="upload-use-vad" style="display: inline-block; font-weight: normal;">Utiliser la détection de voix (VAD)</label>
-                <br><br>
-                <input type="checkbox" id="upload-use-diarization">
-                <label for="upload-use-diarization" style="display: inline-block; font-weight: normal;">Activer la diarisation (identification des locuteurs)</label>
+                <div style="margin-top: 0.5rem;">
+                    <input type="checkbox" id="upload-use-vad" checked>
+                    <label for="upload-use-vad" style="display: inline-block; font-weight: normal; margin-left: 0.5rem;">Utiliser la détection de voix (VAD)</label>
+                </div>
+                <div style="margin-top: 0.5rem;">
+                    <input type="checkbox" id="upload-use-diarization">
+                    <label for="upload-use-diarization" style="display: inline-block; font-weight: normal; margin-left: 0.5rem;">Activer la diarisation (identification des locuteurs)</label>
+                </div>
+            </div>
+            
+            <div class="form-group upload-step">Étape 5 : Enrichissement (optionnel)</div>
+            <div class="form-group">
+                <div style="display: flex; align-items: center;">
+                    <input type="checkbox" id="upload-enrichment" style="margin-right: 0.5rem;">
+                    <label for="upload-enrichment" style="font-weight: normal; margin: 0;">Activer l'enrichissement (titre, résumé, score, bullet points)</label>
+                </div>
+                
+                <div id="enrichment-options" style="margin-top: 1rem; padding-left: 1.5rem; border-left: 3px solid #4a90e2; display: none;">
+                    <div class="form-group" style="margin-top: 0.5rem;">
+                        <label for="upload-llm-model">Modèle LLM :</label>
+                        <select id="upload-llm-model">
+                            <option value="Phi-3-mini-4k-instruct-q4.gguf">Phi-3-mini (rapide)</option>
+                            <option value="Mistral-7B-Instruct-v0.3-Q4_K_M.gguf">Mistral-7B (équilibré)</option>
+                        </select>
+                        <small>Modèle local depuis ./shared/models/enrichment</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Prompts personnalisés (optionnel) :</label>
+                        <details style="margin-top: 0.5rem;">
+                            <summary style="cursor: pointer; color: #4a90e2;">✏️ Éditer les prompts</summary>
+                            <div style="margin-top: 0.5rem;">
+                                <label for="enrichment-prompt-title" style="font-size: 0.9rem;">Prompt pour le titre :</label>
+                                <textarea id="enrichment-prompt-title" rows="2" style="width: 100%; font-size: 0.9rem; padding: 0.5rem;" placeholder="Génère un titre court et accrocheur (maximum 10 mots) pour cette transcription:"></textarea>
+                                
+                                <label for="enrichment-prompt-summary" style="font-size: 0.9rem; margin-top: 0.5rem; display: block;">Prompt pour le résumé :</label>
+                                <textarea id="enrichment-prompt-summary" rows="2" style="width: 100%; font-size: 0.9rem; padding: 0.5rem;" placeholder="Génère un résumé concis de moins de 100 mots pour cette transcription:"></textarea>
+                                
+                                <label for="enrichment-prompt-satisfaction" style="font-size: 0.9rem; margin-top: 0.5rem; display: block;">Prompt pour le score de satisfaction :</label>
+                                <textarea id="enrichment-prompt-satisfaction" rows="2" style="width: 100%; font-size: 0.9rem; padding: 0.5rem;" placeholder="Analyse cette transcription et attribue un score de satisfaction client de 1 à 10. Justifie brièvement ton score. Format JSON: {&quot;score&quot;: nombre, &quot;justification&quot;: &quot;texte&quot;}"></textarea>
+                                
+                                <label for="enrichment-prompt-bullets" style="font-size: 0.9rem; margin-top: 0.5rem; display: block;">Prompt pour les bullet points :</label>
+                                <textarea id="enrichment-prompt-bullets" rows="2" style="width: 100%; font-size: 0.9rem; padding: 0.5rem;" placeholder="Extrais les points clés de cette transcription sous forme de puces. Format JSON: {&quot;points&quot;: [&quot;point 1&quot;, &quot;point 2&quot;, ...]}"></textarea>
+                            </div>
+                        </details>
+                    </div>
+                </div>
             </div>
             <button id="upload-submit-btn" class="btn btn-success" style="width: 100%; padding: 0.8rem; font-size: 1rem;">Lancer la transcription</button>
         </div>

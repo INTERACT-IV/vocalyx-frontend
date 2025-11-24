@@ -195,7 +195,7 @@ class VocalyxDashboardAPI {
     // TRANSCRIPTIONS
     // ========================================================================
     
-    async uploadAudio(file, projectName, apiKey, useVad = true, useDiarization = false, whisperModel = 'small') {
+    async uploadAudio(file, projectName, apiKey, useVad = true, useDiarization = false, whisperModel = "small", enrichment = false, llmModel = null, enrichmentPrompts = null) {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('project_name', projectName);
@@ -203,12 +203,17 @@ class VocalyxDashboardAPI {
         formData.append('use_vad', useVad);
         formData.append('diarization', useDiarization);
         formData.append('whisper_model', whisperModel);
+        formData.append('enrichment', enrichment || false);
         
-        // NOTE: Cet endpoint n'est pas dans l'API, il doit être dans routes.py
-        // Vérifions routes.py... il n'y a pas de /api/upload.
-        // C'est un bug potentiel, mais je me concentre sur le WS.
+        if (enrichment) {
+            if (llmModel) {
+                formData.append('llm_model', llmModel);
+            }
+            if (enrichmentPrompts) {
+                formData.append('enrichment_prompts', JSON.stringify(enrichmentPrompts));
+            }
+        }
         
-        // ... En supposant que cet endpoint existe dans 'dashboard_router'
         const response = await fetch(`${this.baseURL}/api/upload`, {
             method: 'POST',
             body: formData

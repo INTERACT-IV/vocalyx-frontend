@@ -274,7 +274,7 @@ body {
 /* Styles pour le statut des workers */
 #worker-status-container {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.5rem;
     font-size: 0.95rem;
     font-weight: 600;
@@ -311,17 +311,18 @@ body {
 .worker-monitoring-table {
     table-layout: fixed;
 }
-.worker-monitoring-table .col-instance { width: 18%; }
-.worker-monitoring-table .col-status { width: 8%; }
-.worker-monitoring-table .col-charge-num { width: 8%; }
-.worker-monitoring-table .col-charge-bar { width: 8%; }
-.worker-monitoring-table .col-cpu-num { width: 8%; }
-.worker-monitoring-table .col-cpu-bar { width: 8%; }
-.worker-monitoring-table .col-ram-num { width: 8%; }
-.worker-monitoring-table .col-ram-bar { width: 8%; }
-.worker-monitoring-table .col-uptime { width: 8%; }
-.worker-monitoring-table .col-jobs { width: 8%; }
-.worker-monitoring-table .col-audio { width: 10%; }
+.worker-monitoring-table .col-instance { width: 15%; }
+.worker-monitoring-table .col-type { width: 12%; }
+.worker-monitoring-table .col-status { width: 7%; }
+.worker-monitoring-table .col-charge-num { width: 7%; }
+.worker-monitoring-table .col-charge-bar { width: 7%; }
+.worker-monitoring-table .col-cpu-num { width: 7%; }
+.worker-monitoring-table .col-cpu-bar { width: 7%; }
+.worker-monitoring-table .col-ram-num { width: 7%; }
+.worker-monitoring-table .col-ram-bar { width: 7%; }
+.worker-monitoring-table .col-uptime { width: 7%; }
+.worker-monitoring-table .col-jobs { width: 7%; }
+.worker-monitoring-table .col-audio { width: 9%; }
 
 
 /* Statut offline pour la ligne */
@@ -414,13 +415,14 @@ body {
 /* Dimensions des colonnes des Transcriptions */
 .grid-table .col-status { width: 9%; }
 .grid-table .col-project { width: 8%; }
-.grid-table .col-id { width: 20%; } 
-.grid-table .col-instance { width: 8%; }
+.grid-table .col-id { width: 18%; } 
+.grid-table .col-worker-transcribe { width: 8%; }
+.grid-table .col-worker-enrichment { width: 8%; }
 .grid-table .col-lang { width: 5%; }
-.grid-table .col-duree { width: 10%; }
+.grid-table .col-duree { width: 8%; }
 .grid-table .col-process { width: 10%; }
-.grid-table .col-date { width: 15%; }
-.grid-table .col-actions { width: 7%; }
+.grid-table .col-date { width: 12%; }
+.grid-table .col-actions { width: 6%; }
 
 .projects-grid {
     display: grid;
@@ -615,6 +617,168 @@ body {
 }
 .status-done .status-indicator { background: var(--success); }
 .status-error .status-indicator { background: var(--danger); }
+
+/* Badge de type de worker */
+.worker-type-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.worker-type-badge.worker-type-transcription {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #0ea5e9;
+}
+.worker-type-badge.worker-type-enrichment {
+    background: #fce7f3;
+    color: #9f1239;
+    border: 1px solid #f472b6;
+}
+
+/* Styles pour l'enrichissement */
+.enrichment-container {
+    padding: 1rem;
+}
+
+.enrichment-section {
+    margin-bottom: 1.5rem;
+}
+
+.enrichment-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.enrichment-item {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.enrichment-item h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #475569;
+}
+
+.enrichment-value {
+    color: #1e293b;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.satisfaction-score {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.score-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.score-justification {
+    color: #64748b;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.bullet-points {
+    list-style: none;
+    padding-left: 0;
+    margin: 0.5rem 0 0 0;
+}
+
+.bullet-points li {
+    padding: 0.5rem 0;
+    padding-left: 1.5rem;
+    position: relative;
+    line-height: 1.6;
+    color: #1e293b;
+}
+
+.bullet-points li::before {
+    content: "▸";
+    position: absolute;
+    left: 0;
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.enrichment-status {
+    text-align: center;
+    padding: 2rem;
+    color: #64748b;
+}
+
+.loading-spinner {
+    border: 3px solid #f3f4f6;
+    border-top: 3px solid var(--primary);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.enrichment-timing-info {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    color: #475569;
+    font-size: 0.9rem;
+}
+
+.enrichment-timing-info ul {
+    margin: 0.5rem 0 0 0;
+    padding-left: 1.5rem;
+    list-style-type: disc;
+}
+
+.enrichment-timing-info li {
+    margin: 0.25rem 0;
+    color: #64748b;
+}
+
+.enrichment-timing-info li strong {
+    color: #1e293b;
+}
+
+.enrichment-item h4 small {
+    font-weight: normal;
+    font-size: 0.85em;
+    margin-left: 0.5rem;
+}
+
+.enrichment-metadata {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+    color: #64748b;
+    font-size: 0.85rem;
+}
 
 @keyframes pulse {
     0%, 100% { opacity: 1; }
@@ -839,7 +1003,7 @@ button:focus, [tabindex="0"]:focus {
 
 /* NOUVEAUX STYLES POUR LES FORMULAIRES DES MODALES */
 .form-group {
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
 }
 .form-group label {
     display: block;
@@ -1035,6 +1199,11 @@ button:focus, [tabindex="0"]:focus {
   background: #fff3cd;
   color: #856404;
   border: 1px solid #ffeaa7;
+}
+.badge-transcribed {
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
 }
 .badge-done {
   background: #d4edda;

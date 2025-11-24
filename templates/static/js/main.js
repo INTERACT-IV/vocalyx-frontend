@@ -393,7 +393,7 @@ function renderWorkerMonitoringGrid(stats) {
     Object.keys(registeredWorkers).forEach(name => allWorkerNames.add(name));
 
     if (allWorkerNames.size === 0) {
-        gridBody.innerHTML = `<tr><td colspan="11" style="text-align:center;">Aucun worker Celery n'est actuellement connecté au broker.</td></tr>`;
+        gridBody.innerHTML = `<tr><td colspan="12" style="text-align:center;">Aucun worker Celery n'est actuellement connecté au broker.</td></tr>`;
         return;
     }
 
@@ -404,6 +404,15 @@ function renderWorkerMonitoringGrid(stats) {
         
         const health = workerData?.health;
         const db_stats = workerData?.db_stats;
+        
+        // Déterminer le type de worker (transcription ou enrichissement)
+        const simpleName = workerName.split('@')[0];
+        let workerType = "transcription";
+        let workerTypeLabel = "📝 Transcription";
+        if (simpleName.startsWith('enrichment-worker-') || simpleName.includes('enrichment')) {
+            workerType = "enrichment";
+            workerTypeLabel = "✨ Enrichissement";
+        }
         
         let status = "offline";
         let statusClass = "status-offline";
@@ -465,8 +474,12 @@ function renderWorkerMonitoringGrid(stats) {
 
         // Déterminer les classes de coloration selon CPU/RAM
         row.className = statusClass;
+        row.dataset.workerType = workerType;
         row.innerHTML = `
-            <td class="col-instance">${workerName.split('@')[0]}</td>
+            <td class="col-instance">${simpleName}</td>
+            <td class="col-type">
+                <span class="worker-type-badge worker-type-${workerType}">${workerTypeLabel}</span>
+            </td>
             <td class="col-status"><span class="worker-status-light ${statusIndicator}"></span> ${status}</td>
             <td class="col-charge-num">${activeTaskCount}</td>
             <td class="col-charge-bar">${chargeBar}</td>
@@ -501,19 +514,40 @@ function updateWorkerHeader(stats) {
     const headerContainer = document.getElementById("worker-status-container");
     if (!headerContainer) return;
 
-    const workerCount = stats.worker_count || 0;
-    const activeTasks = stats.active_tasks || 0;
+    const transcriptionWorkerCount = stats.transcription_worker_count || 0;
+    const enrichmentWorkerCount = stats.enrichment_worker_count || 0;
+    const transcriptionActiveTasks = stats.transcription_active_tasks || 0;
+    const enrichmentActiveTasks = stats.enrichment_active_tasks || 0;
+    const totalWorkerCount = (transcriptionWorkerCount || 0) + (enrichmentWorkerCount || 0);
+    const totalActiveTasks = (transcriptionActiveTasks || 0) + (enrichmentActiveTasks || 0);
     
-    updateStatValue("stat-workers", workerCount);
+    updateStatValue("stat-workers", totalWorkerCount);
 
-    let statusClass = "status-ok";
-    if (workerCount === 0) statusClass = "status-error";
-    else if (activeTasks > 0) statusClass = "status-busy";
+    // Déterminer le statut pour chaque type de worker
+    let transcriptionStatusClass = "status-ok";
+    if (transcriptionWorkerCount === 0) transcriptionStatusClass = "status-error";
+    else if (transcriptionActiveTasks > 0) transcriptionStatusClass = "status-busy";
+
+    let enrichmentStatusClass = "status-ok";
+    if (enrichmentWorkerCount === 0) enrichmentStatusClass = "status-error";
+    else if (enrichmentActiveTasks > 0) enrichmentStatusClass = "status-busy";
 
     headerContainer.innerHTML = `
-        <span class="worker-status-light ${statusClass}"></span>
-        <span style="font-weight:600;">Workers: ${activeTasks} actifs (${workerCount} total)</span>
-        ${stats.error ? `<span style="color:#dc3545;font-weight:600;">(Erreur: ${stats.error})</span>` : ''}
+        <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span class="worker-status-light ${transcriptionStatusClass}"></span>
+                <span style="font-weight:600;">
+                    Transcription: ${transcriptionActiveTasks} actifs (${transcriptionWorkerCount} workers)
+                </span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span class="worker-status-light ${enrichmentStatusClass}"></span>
+                <span style="font-weight:600;">
+                    Enrichissement: ${enrichmentActiveTasks} actifs (${enrichmentWorkerCount} workers)
+                </span>
+            </div>
+        </div>
+        ${stats.error ? `<span style="color:#dc3545;font-weight:600;margin-top:0.3rem;display:block;">(Erreur: ${stats.error})</span>` : ''}
     `;
 }
 
@@ -552,8 +586,38 @@ function updateTranscriptionInUI(transcription) {
         }
         
         const processCell = row.querySelector('.col-process');
-        if (processCell && transcription.processing_time !== undefined) {
-            processCell.textContent = transcription.processing_time ? transcription.processing_time.toFixed(1) + 's' : '-';
+        if (processCell) {
+            const transcriptionTime = transcription.processing_time || 0;
+            // Utiliser enrichment_data.timing.total_time si disponible, sinon enrichment_processing_time
+            let enrichmentTime = 0;
+            if (transcription.enrichment_data && transcription.enrichment_data.timing && transcription.enrichment_data.timing.total_time) {
+                enrichmentTime = transcription.enrichment_data.timing.total_time;
+            } else if (transcription.enrichment_processing_time) {
+                enrichmentTime = transcription.enrichment_processing_time;
+            }
+            const totalProcessingTime = transcriptionTime + enrichmentTime;
+            
+            let processingTimeDisplay;
+            if (transcription.enrichment_requested) {
+              if (enrichmentTime > 0) {
+                processingTimeDisplay = `${totalProcessingTime.toFixed(1)}s`;
+              } else {
+                processingTimeDisplay = transcriptionTime ? `${transcriptionTime.toFixed(1)}s` : '-';
+              }
+            } else {
+              processingTimeDisplay = transcriptionTime ? `${transcriptionTime.toFixed(1)}s` : '-';
+            }
+            processCell.textContent = processingTimeDisplay;
+        }
+        
+        // Mettre à jour les colonnes workers
+        const transcribeWorkerCell = row.querySelector('.col-worker-transcribe');
+        if (transcribeWorkerCell) {
+            transcribeWorkerCell.textContent = transcription.worker_id || 'N/A';
+        }
+        const enrichmentWorkerCell = row.querySelector('.col-worker-enrichment');
+        if (enrichmentWorkerCell) {
+            enrichmentWorkerCell.textContent = transcription.enrichment_worker_id || '-';
         }
         
         console.log(`✅ Transcription ${transcription.id} mise à jour dans l'UI`);
@@ -642,7 +706,7 @@ async function refreshTranscriptions(page = 1, limit = 25) {
         const container = document.getElementById("grid-table-body");
         if (container) {
             container.innerHTML = `
-                <tr><td colspan="9" style="color:red;text-align:center;padding:2rem;">
+                <tr><td colspan="10" style="color:red;text-align:center;padding:2rem;">
                     Erreur de chargement: ${err.message}
                 </td></tr>
             `;
@@ -655,6 +719,7 @@ function statusToBadge(status) {
   switch (status) {
     case 'pending': label='En attente'; cls+=' badge-pending'; break;
     case 'processing': label='En cours'; cls+=' badge-processing'; break;
+    case 'transcribed': label='Transcrit'; cls+=' badge-transcribed'; break;
     case 'done': label='Terminé'; cls+=' badge-done'; break;
     case 'error': label='Erreur'; cls+=' badge-error'; break;
     default: label = (status || '-');
@@ -708,12 +773,12 @@ function renderTranscriptions(transcriptions, countData, filters) {
   if (!container) return;
   container.innerHTML = "";
   if (!Array.isArray(transcriptions)) {
-    container.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;color:red;">Erreur: Les données reçues ne sont pas au bon format</td></tr>`;
+    container.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:2rem;color:red;">Erreur: Les données reçues ne sont pas au bon format</td></tr>`;
     return;
   }
   const totalCount = countData?.total_filtered ?? countData?.total ?? transcriptions.length;
   if (transcriptions.length === 0) {
-    container.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;">Aucune transcription trouvée.</td></tr>`;
+    container.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:2rem;">Aucune transcription trouvée.</td></tr>`;
     setContextBanner({ extraContext: formatFiltersBanner(0, filters||{}) });
     return;
   }
@@ -722,14 +787,43 @@ function renderTranscriptions(transcriptions, countData, filters) {
     const row = document.createElement("tr");
     row.className = `status-${entry.status || 'unknown'}`;
     row.dataset.id = entry.id;
+    // Calculer le temps de traitement total (transcription + enrichissement)
+    // Toujours inclure le temps d'enrichissement s'il est disponible (même si pas encore terminé)
+    const transcriptionTime = entry.processing_time || 0;
+    // Utiliser enrichment_data.timing.total_time si disponible, sinon enrichment_processing_time
+    let enrichmentTime = 0;
+    if (entry.enrichment_data && entry.enrichment_data.timing && entry.enrichment_data.timing.total_time) {
+        enrichmentTime = entry.enrichment_data.timing.total_time;
+    } else if (entry.enrichment_processing_time) {
+        enrichmentTime = entry.enrichment_processing_time;
+    }
+    const totalProcessingTime = transcriptionTime + enrichmentTime;
+    
+    // Si enrichissement demandé mais pas encore terminé, utiliser le temps de transcription seulement
+    // Si enrichissement terminé, utiliser le temps total
+    let processingTimeDisplay;
+    if (entry.enrichment_requested) {
+      if (enrichmentTime > 0) {
+        // Enrichissement terminé : afficher le temps total
+        processingTimeDisplay = `${totalProcessingTime.toFixed(1)}s`;
+      } else {
+        // Enrichissement en cours ou en attente : afficher seulement transcription pour l'instant
+        processingTimeDisplay = entry.processing_time ? `${transcriptionTime.toFixed(1)}s` : '-';
+      }
+    } else {
+      // Pas d'enrichissement demandé : afficher seulement le temps de transcription
+      processingTimeDisplay = entry.processing_time ? `${transcriptionTime.toFixed(1)}s` : '-';
+    }
+    
     row.innerHTML = `
       <td class="col-status">${statusToBadge(entry.status)}</td>
       <td class="col-project">${escapeHtml(entry.project_name || 'N/A')}</td>
       <td class="col-id">${escapeHtml(entry.id)}</td>
-      <td class="col-instance">${escapeHtml(entry.worker_id || 'N/A')}</td>
+      <td class="col-worker-transcribe">${escapeHtml(entry.worker_id || 'N/A')}</td>
+      <td class="col-worker-enrichment">${escapeHtml(entry.enrichment_worker_id || '-')}</td>
       <td class="col-lang">${escapeHtml(entry.language || '...')}</td>
       <td class="col-duree dur-group" title="Durée totale de l'audio en secondes">${entry.duration ? entry.duration.toFixed(1) + 's' : '-'}</td>
-      <td class="col-process dur-group" title="Temps de traitement en secondes">${entry.processing_time ? entry.processing_time.toFixed(1) + 's' : '-'}</td>
+      <td class="col-process dur-group" title="Temps de traitement total (transcription + enrichissement) en secondes">${processingTimeDisplay}</td>
       <td class="col-date" title="${formatHumanDate(entry.created_at)}">${formatHumanDate(entry.created_at)}</td>
       <td class="col-actions"><button class="btn-delete btn btn-danger" title="Supprimer la transcription">Supprimer</button></td>`;
     fragment.appendChild(row);

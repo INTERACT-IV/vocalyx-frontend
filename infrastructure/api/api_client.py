@@ -193,7 +193,10 @@ class VocalyxAPIClient:
         filename: str,
         use_vad: bool = True,
         diarization: bool = False,
-        whisper_model: str = "small"
+        whisper_model: str = "small",
+        enrichment: bool = False,
+        llm_model: Optional[str] = None,
+        enrichment_prompts: Optional[Dict[str, str]] = None
     ) -> Dict[str, Any]:
         """Crée une nouvelle transcription"""
         try:
@@ -202,8 +205,17 @@ class VocalyxAPIClient:
                 "project_name": project_name,
                 "use_vad": str(use_vad).lower(),
                 "diarization": str(diarization).lower(),
-                "whisper_model": whisper_model
+                "whisper_model": whisper_model,
+                "enrichment": str(enrichment).lower()
             }
+            
+            if enrichment:
+                if llm_model:
+                    data["llm_model"] = llm_model
+                if enrichment_prompts:
+                    import json
+                    data["enrichment_prompts"] = json.dumps(enrichment_prompts, ensure_ascii=False)
+            
             headers = {"X-API-Key": api_key}
             
             response = await self.async_client.post(
@@ -400,7 +412,15 @@ class VocalyxAPIClient:
             return response.json()
         except httpx.HTTPError as e:
             logger.error(f"Error getting workers status: {e}")
-            return {"worker_count": 0, "active_tasks": 0, "error": str(e)}
+            return {
+                "worker_count": 0,
+                "transcription_worker_count": 0,
+                "enrichment_worker_count": 0,
+                "active_tasks": 0,
+                "transcription_active_tasks": 0,
+                "enrichment_active_tasks": 0,
+                "error": str(e)
+            }
     
     def health_check(self) -> Dict[str, Any]:
         """Vérifie la santé de l'API"""

@@ -164,6 +164,15 @@ if (qualitySlider) {
     updateQualityDisplay(qualitySlider.value);
 }
 
+// Afficher/masquer les options d'enrichissement
+const uploadEnrichmentCheckbox = document.getElementById("upload-enrichment");
+const enrichmentOptions = document.getElementById("enrichment-options");
+if (uploadEnrichmentCheckbox && enrichmentOptions) {
+    uploadEnrichmentCheckbox.addEventListener("change", (e) => {
+        enrichmentOptions.style.display = e.target.checked ? "block" : "none";
+    });
+}
+
 // Logique d'upload (bouton "Soumettre" de la modale)
 const uploadSubmitBtn = document.getElementById("upload-submit-btn");
 if (uploadSubmitBtn) {
@@ -180,6 +189,26 @@ if (uploadSubmitBtn) {
         const apiKey = document.getElementById("upload-api-key-input")?.value;
         const useVad = document.getElementById("upload-use-vad")?.checked;
         const useDiarization = document.getElementById("upload-use-diarization")?.checked;
+        const enrichment = document.getElementById("upload-enrichment")?.checked || false;
+        const llmModel = enrichment ? (document.getElementById("upload-llm-model")?.value || null) : null;
+        
+        // Récupérer les prompts personnalisés si fournis
+        let enrichmentPrompts = null;
+        if (enrichment) {
+            const titlePrompt = document.getElementById("enrichment-prompt-title")?.value.trim();
+            const summaryPrompt = document.getElementById("enrichment-prompt-summary")?.value.trim();
+            const satisfactionPrompt = document.getElementById("enrichment-prompt-satisfaction")?.value.trim();
+            const bulletsPrompt = document.getElementById("enrichment-prompt-bullets")?.value.trim();
+            
+            // Créer l'objet prompts seulement si au moins un prompt est personnalisé
+            if (titlePrompt || summaryPrompt || satisfactionPrompt || bulletsPrompt) {
+                enrichmentPrompts = {};
+                if (titlePrompt) enrichmentPrompts.title = titlePrompt;
+                if (summaryPrompt) enrichmentPrompts.summary = summaryPrompt;
+                if (satisfactionPrompt) enrichmentPrompts.satisfaction = satisfactionPrompt;
+                if (bulletsPrompt) enrichmentPrompts.bullet_points = bulletsPrompt;
+            }
+        }
         
         // Récupérer la qualité sélectionnée
         const qualitySlider = document.getElementById("upload-quality-slider");
@@ -197,7 +226,7 @@ if (uploadSubmitBtn) {
         
         try {
             // L'upload reste en HTTP, c'est normal
-            const result = await api.uploadAudio(file, projectName, apiKey, useVad, useDiarization, whisperModel);
+            const result = await api.uploadAudio(file, projectName, apiKey, useVad, useDiarization, whisperModel, enrichment, llmModel, enrichmentPrompts);
             
             showToast(`✅ Upload (Projet: ${projectName}) réussi !`, "success");
             

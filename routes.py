@@ -5,6 +5,7 @@ Routes du Dashboard (corrigé pour import circulaire)
 
 import logging
 from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException, Query, Body, Depends
+from typing import Optional
 from fastapi.responses import JSONResponse
 
 from api_client import VocalyxAPIClient
@@ -115,6 +116,9 @@ async def upload_audio(
     use_vad: bool = Form(True),
     diarization: bool = Form(False),
     whisper_model: str = Form("small"),
+    enrichment: bool = Form(False),
+    llm_model: Optional[str] = Form(None),
+    enrichment_prompts: Optional[str] = Form(None),
     token: str = Depends(get_current_token)
 ):
     """Upload un fichier audio pour transcription (proxy vers l'API)"""
@@ -125,6 +129,15 @@ async def upload_audio(
         file_content = await file.read()
         filename = file.filename or "audio.wav"
         
+        # Parser les prompts d'enrichissement si fournis
+        enrichment_prompts_dict = None
+        if enrichment_prompts:
+            import json
+            try:
+                enrichment_prompts_dict = json.loads(enrichment_prompts)
+            except json.JSONDecodeError:
+                logger.warning(f"Invalid JSON format for enrichment_prompts: {enrichment_prompts}")
+        
         # Appeler l'API pour créer la transcription
         result = await api_client.create_transcription(
             project_name=project_name,
@@ -133,7 +146,10 @@ async def upload_audio(
             filename=filename,
             use_vad=use_vad,
             diarization=diarization,
-            whisper_model=whisper_model
+            whisper_model=whisper_model,
+            enrichment=enrichment,
+            llm_model=llm_model,
+            enrichment_prompts=enrichment_prompts_dict
         )
         return JSONResponse(content=result, status_code=201)
     except Exception as e:
@@ -243,7 +259,11 @@ async def get_workers_status(
         logger.error(f"Error getting workers status: {e}")
         return JSONResponse(content={
             "worker_count": 0,
+            "transcription_worker_count": 0,
+            "enrichment_worker_count": 0,
             "active_tasks": 0,
+            "transcription_active_tasks": 0,
+            "enrichment_active_tasks": 0,
             "error": str(e)
         })
 
