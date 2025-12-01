@@ -206,6 +206,7 @@ async def render_dashboard(request: Request, token: str, default_view: str = "tr
         "request": request,
         "api_url": config.api_url,
         "flower_url": config.flower_url,
+        "ws_port": config.ws_port,
         "DEFAULT_PROJECT_NAME": default_project_name or "",
         "DEFAULT_PROJECT_KEY": default_project_key or "",
         "active_page": default_view,

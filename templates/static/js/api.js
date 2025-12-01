@@ -101,8 +101,10 @@ class VocalyxDashboardAPI {
             return;
         }
 
-        // 2. Construire l'URL de l'API (ws://localhost:8000)
-        const apiWsUrl = `ws://${window.location.hostname}:8000`; 
+        // 2. Construire l'URL de l'API (ws://<hostname>:<port>)
+        // Le hostname vient toujours du navigateur, seul le port est configurable via config.ini
+        const wsPort = (window.VOCALYX_CONFIG && window.VOCALYX_CONFIG.WS_PORT) || 8000;
+        const apiWsUrl = `ws://${window.location.hostname}:${wsPort}`; 
         
         // 3. Construire l'URL finale avec le token en query param
         const finalWsUrl = `${apiWsUrl}/api/ws/updates?token=${token}`;

@@ -27,7 +27,9 @@ class Config:
         
         config['API'] = {
             'url': 'http://localhost:8000',
-            'timeout': '30'
+            'timeout': '30',
+            # Port utilisé pour la connexion WebSocket vers l'API (hostname = navigateur)
+            'ws_port': '8000',
         }
         
         config['SECURITY'] = {
@@ -64,6 +66,16 @@ class Config:
             self.config.get('API', 'url')
         )
         self.api_timeout = self.config.getint('API', 'timeout', fallback=30)
+        # Port WebSocket (uniquement le port, l'hôte vient de window.location.hostname côté frontend)
+        ws_port_str = os.environ.get(
+            'VOCALYX_WS_PORT',
+            self.config.get('API', 'ws_port', fallback='8000')
+        )
+        try:
+            self.ws_port = int(ws_port_str)
+        except ValueError:
+            logging.warning(f"⚠️ Invalid WS port '{ws_port_str}' in config, using 8000 as fallback")
+            self.ws_port = 8000
         
         # SECURITY
         self.internal_api_key = os.environ.get(

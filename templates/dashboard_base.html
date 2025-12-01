@@ -164,6 +164,7 @@
 <script>
     window.VOCALYX_CONFIG = {
         API_URL: "{{ api_url|e }}",
+        WS_PORT: {{ ws_port|default(8000) }},
         DEFAULT_PROJECT_NAME: "{{ DEFAULT_PROJECT_NAME|e }}",
         DEFAULT_PROJECT_KEY: "{{ DEFAULT_PROJECT_KEY|e }}",
         USER_IS_ADMIN: {{ 'true' if user_is_admin else 'false' }}
