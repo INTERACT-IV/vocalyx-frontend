@@ -39,6 +39,10 @@ class Config:
             'templates_dir': 'templates'
         }
         
+        config['EXTERNAL'] = {
+            'flower_url': 'http://localhost:5555/flower/'
+        }
+        
         config['LOGGING'] = {
             'level': 'INFO',
             'file_enabled': 'true',
@@ -76,6 +80,12 @@ class Config:
         
         # PATHS
         self.templates_dir = self.config.get('PATHS', 'templates_dir')
+        
+        # EXTERNAL SERVICES / UI LINKS
+        self.flower_url = os.environ.get(
+            'VOCALYX_FLOWER_URL',
+            self.config.get('EXTERNAL', 'flower_url', fallback='http://localhost:5555/flower/')
+        )
         
         # LOGGING
         self.log_level = os.environ.get(
