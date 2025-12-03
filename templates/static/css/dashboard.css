@@ -13,11 +13,16 @@ body {
     margin: 0;
     background: #f3f5f9;
     color: #333;
+    overflow-x: auto;
 }
 
 .app-shell {
     display: flex;
     min-height: 100vh;
+    transform: scale(0.7);
+    transform-origin: top left;
+    width: 142.857%; /* 100% / 0.7 pour compenser la réduction */
+    min-height: 142.857vh; /* 100vh / 0.7 pour compenser la réduction */
 }
 
 .sidebar {
