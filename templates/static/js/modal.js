@@ -422,9 +422,46 @@ function escapeRegex(str) {
  * Copie le texte dans le presse-papier
  */
 function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        showToast("Texte copié dans le presse-papier !", "success");
-    }).catch(err => {
-        showToast("Erreur lors de la copie", "error");
-    });
+    // Méthode moderne avec navigator.clipboard (nécessite HTTPS ou localhost)
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast("Texte copié dans le presse-papier !", "success");
+        }).catch(err => {
+            // Fallback si clipboard API échoue
+            fallbackCopyToClipboard(text);
+        });
+    } else {
+        // Fallback pour les navigateurs qui ne supportent pas clipboard API
+        fallbackCopyToClipboard(text);
+    }
+}
+
+/**
+ * Méthode de fallback pour copier dans le presse-papier
+ */
+function fallbackCopyToClipboard(text) {
+    // Créer un élément textarea temporaire
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-999999px";
+    textArea.style.top = "-999999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        // Utiliser la méthode classique execCommand
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showToast("Texte copié dans le presse-papier !", "success");
+        } else {
+            showToast("Erreur lors de la copie. Veuillez copier manuellement.", "error");
+        }
+    } catch (err) {
+        showToast("Erreur lors de la copie. Veuillez copier manuellement.", "error");
+    } finally {
+        // Nettoyer l'élément temporaire
+        document.body.removeChild(textArea);
+    }
 }
