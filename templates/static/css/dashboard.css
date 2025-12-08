@@ -2038,6 +2038,7 @@ button:focus, [tabindex="0"]:focus {
   padding: 1rem;
   min-height: 0;
   position: relative;
+  max-height: calc(100vh - 300px);
 }
 .text-view-content pre,
 .json-view-content pre {
@@ -2053,11 +2054,59 @@ button:focus, [tabindex="0"]:focus {
   font-family: 'Courier New', monospace;
   font-size: 0.85rem;
   line-height: 1.6;
-  white-space: pre-wrap;
+  white-space: pre;
   word-wrap: break-word;
   overflow-wrap: break-word;
   max-width: 100%;
   margin: 0;
   padding: 0;
   display: block;
+}
+
+/* Coloration syntaxique JSON */
+.json-formatted {
+  font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.9rem;
+  line-height: 1.8;
+  color: #1e293b;
+  background: #ffffff;
+  white-space: pre;
+  overflow: visible;
+  margin: 0;
+  padding: 0;
+}
+
+.json-formatted .json-key {
+  color: #0ea5e9;
+  font-weight: 500;
+}
+
+.json-formatted .json-string {
+  color: #10b981;
+}
+
+.json-formatted .json-number {
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+.json-formatted .json-boolean {
+  color: #8b5cf6;
+  font-weight: 500;
+}
+
+.json-formatted .json-null {
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.json-formatted .json-undefined {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.json-formatted .json-brace,
+.json-formatted .json-bracket {
+  color: #64748b;
+  font-weight: 600;
 }

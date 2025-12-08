@@ -319,7 +319,7 @@ function renderTranscriptionModal(data) {
                     </div>
                 </div>
                 <div class="json-view-content">
-                    <pre>${escapeHtml(jsonData)}</pre>
+                    <pre class="json-formatted" id="json-formatted-content">${formatJSON(data)}</pre>
                 </div>
             </div>
         </div>
@@ -416,6 +416,68 @@ function highlightTextInFullText(segment, fullText) {
  */
 function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Formate et colore le JSON de manière belle
+ * @param {Object} obj - L'objet à formater
+ * @param {number} indent - Niveau d'indentation (interne)
+ * @returns {string} - HTML formaté avec coloration syntaxique
+ */
+function formatJSON(obj, indent = 0) {
+    const indentStr = '  '.repeat(indent);
+    const nextIndent = indent + 1;
+    const nextIndentStr = '  '.repeat(nextIndent);
+    
+    if (obj === null) {
+        return '<span class="json-null">null</span>';
+    }
+    
+    if (obj === undefined) {
+        return '<span class="json-undefined">undefined</span>';
+    }
+    
+    const type = typeof obj;
+    
+    if (type === 'string') {
+        return `<span class="json-string">"${escapeHtml(obj)}"</span>`;
+    }
+    
+    if (type === 'number') {
+        return `<span class="json-number">${obj}</span>`;
+    }
+    
+    if (type === 'boolean') {
+        return `<span class="json-boolean">${obj}</span>`;
+    }
+    
+    if (Array.isArray(obj)) {
+        if (obj.length === 0) {
+            return '<span class="json-bracket">[]</span>';
+        }
+        
+        const items = obj.map(item => {
+            return `${nextIndentStr}${formatJSON(item, nextIndent)}`;
+        }).join(',\n');
+        
+        return `<span class="json-bracket">[</span>\n${items}\n${indentStr}<span class="json-bracket">]</span>`;
+    }
+    
+    if (type === 'object') {
+        const keys = Object.keys(obj);
+        if (keys.length === 0) {
+            return '<span class="json-brace">{}</span>';
+        }
+        
+        const items = keys.map(key => {
+            const value = formatJSON(obj[key], nextIndent);
+            return `${nextIndentStr}<span class="json-key">"${escapeHtml(key)}"</span>: ${value}`;
+        }).join(',\n');
+        
+        return `<span class="json-brace">{</span>\n${items}\n${indentStr}<span class="json-brace">}</span>`;
+    }
+    
+    return escapeHtml(String(obj));
 }
 
 /**
