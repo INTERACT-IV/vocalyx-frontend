@@ -315,8 +315,7 @@ function renderTranscriptionModal(data) {
                 <div class="json-view-header">
                     <h3>JSON brut</h3>
                     <div class="json-view-actions">
-                        <button onclick="navigator.clipboard.writeText(JSON.stringify(currentTranscriptionData, null, 2)).then(() => { showToast ? showToast('JSON copié dans le presse-papiers', 'success') : alert('JSON copié'); }).catch(() => { alert('Erreur lors de la copie'); })" class="btn btn-primary">📋 Copier JSON</button>
-                        <button class="btn btn-success" id="json-copy-btn">📋 Copier</button>
+                        <button class="btn btn-primary" id="json-copy-btn">📋 Copier JSON</button>
                     </div>
                 </div>
                 <div class="json-view-content">
@@ -345,11 +344,12 @@ function renderTranscriptionModal(data) {
     // Ajouter les événements de clic sur les segments avec surlignage
     attachSegmentEvents(data);
     
-    // Ajouter l'événement de copie pour le JSON (utiliser jsonData directement depuis la closure)
+    // Ajouter l'événement de copie pour le JSON
     const jsonCopyBtn = document.getElementById('json-copy-btn');
     if (jsonCopyBtn) {
         jsonCopyBtn.addEventListener('click', () => {
-            copyToClipboard(jsonData); // jsonData est accessible via la closure
+            const jsonToCopy = JSON.stringify(data, null, 2);
+            copyToClipboard(jsonToCopy);
         });
     }
 }
