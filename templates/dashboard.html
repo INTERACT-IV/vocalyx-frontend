@@ -383,10 +383,11 @@
                     <div class="form-group" style="margin-top: 0.5rem;">
                         <label for="upload-llm-model">Modèle LLM :</label>
                         <select id="upload-llm-model">
-                            <option value="Phi-3-mini-4k-instruct-q4.gguf">Phi-3-mini (rapide)</option>
-                            <option value="Mistral-7B-Instruct-v0.3-Q4_K_M.gguf">Mistral-7B (équilibré)</option>
+                            <option value="tinyllama" selected>TinyLlama 1.1B (ultra-rapide, 669 MB)</option>
+                            <option value="phi-3-mini">Phi-3-mini (rapide, 2.3 GB)</option>
+                            <option value="mistral-7b-instruct">Mistral-7B (équilibré, 4.1 GB)</option>
                         </select>
-                        <small>Modèle local depuis ./shared/models/enrichment</small>
+                        <small>Modèle depuis shared/models/enrichment/ ou nom de modèle recommandé</small>
                     </div>
                     
                     <div class="form-group">
