@@ -166,28 +166,14 @@ if (qualitySlider) {
 
 // Afficher/masquer les options d'enrichissement
 const uploadEnrichmentCheckbox = document.getElementById("upload-enrichment");
-const uploadEnhancedCheckbox = document.getElementById("upload-enhanced");
+const uploadTextCorrectionCheckbox = document.getElementById("upload-text-correction");
 const enrichmentOptions = document.getElementById("enrichment-options");
 if (uploadEnrichmentCheckbox && enrichmentOptions) {
     uploadEnrichmentCheckbox.addEventListener("change", (e) => {
         enrichmentOptions.style.display = e.target.checked ? "block" : "none";
-        // Si l'enrichissement est désactivé, désactiver aussi l'enrichissement avancé
-        if (!e.target.checked && uploadEnhancedCheckbox) {
-            uploadEnhancedCheckbox.checked = false;
-        }
     });
 }
-if (uploadEnhancedCheckbox && uploadEnrichmentCheckbox) {
-    uploadEnhancedCheckbox.addEventListener("change", (e) => {
-        // Si l'enrichissement avancé est activé, activer aussi l'enrichissement de base
-        if (e.target.checked && !uploadEnrichmentCheckbox.checked) {
-            uploadEnrichmentCheckbox.checked = true;
-            if (enrichmentOptions) {
-                enrichmentOptions.style.display = "block";
-            }
-        }
-    });
-}
+// La correction du texte est indépendante de l'enrichissement (pas de dépendance)
 
 // Logique d'upload (bouton "Soumettre" de la modale)
 const uploadSubmitBtn = document.getElementById("upload-submit-btn");
@@ -206,12 +192,12 @@ if (uploadSubmitBtn) {
         const useVad = document.getElementById("upload-use-vad")?.checked;
         const useDiarization = document.getElementById("upload-use-diarization")?.checked;
         const enrichment = document.getElementById("upload-enrichment")?.checked || false;
-        const enhanced = document.getElementById("upload-enhanced")?.checked || false;  // Enrichissement avancé avec métadonnées
+        const textCorrection = document.getElementById("upload-text-correction")?.checked || false;  // Correction du texte (option séparée)
         const llmModel = enrichment ? (document.getElementById("upload-llm-model")?.value || null) : null;
         
-        // Récupérer les prompts personnalisés si fournis (uniquement si enhanced=true)
+        // Récupérer les prompts personnalisés si fournis (toujours si enrichment=true car c'est l'enrichissement de base)
         let enrichmentPrompts = null;
-        if (enrichment && enhanced) {
+        if (enrichment) {
             const titlePrompt = document.getElementById("enrichment-prompt-title")?.value.trim();
             const summaryPrompt = document.getElementById("enrichment-prompt-summary")?.value.trim();
             const satisfactionPrompt = document.getElementById("enrichment-prompt-satisfaction")?.value.trim();
@@ -243,7 +229,7 @@ if (uploadSubmitBtn) {
         
         try {
             // L'upload reste en HTTP, c'est normal
-            const result = await api.uploadAudio(file, projectName, apiKey, useVad, useDiarization, whisperModel, enrichment, enhanced, llmModel, enrichmentPrompts);
+            const result = await api.uploadAudio(file, projectName, apiKey, useVad, useDiarization, whisperModel, enrichment, textCorrection, llmModel, enrichmentPrompts);
             
             showToast(`✅ Upload (Projet: ${projectName}) réussi !`, "success");
             

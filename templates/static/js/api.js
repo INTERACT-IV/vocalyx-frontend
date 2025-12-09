@@ -197,7 +197,7 @@ class VocalyxDashboardAPI {
     // TRANSCRIPTIONS
     // ========================================================================
     
-    async uploadAudio(file, projectName, apiKey, useVad = true, useDiarization = false, whisperModel = "small", enrichment = false, enhanced = false, llmModel = null, enrichmentPrompts = null) {
+    async uploadAudio(file, projectName, apiKey, useVad = true, useDiarization = false, whisperModel = "small", enrichment = false, textCorrection = false, llmModel = null, enrichmentPrompts = null) {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('project_name', projectName);
@@ -206,7 +206,7 @@ class VocalyxDashboardAPI {
         formData.append('diarization', useDiarization);
         formData.append('whisper_model', whisperModel);
         formData.append('enrichment', enrichment || false);
-        formData.append('enhanced', enhanced || false);  // Enrichissement avancé avec métadonnées
+        formData.append('text_correction', textCorrection || false);  // Correction du texte (option séparée)
         
         if (enrichment) {
             if (llmModel) {
