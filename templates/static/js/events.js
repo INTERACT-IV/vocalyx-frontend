@@ -101,8 +101,8 @@ const qualityLabels = document.querySelectorAll(".quality-label");
 const qualityValueDisplay = document.getElementById("quality-value-display");
 
 if (qualitySlider) {
-    const qualityModels = ["tiny", "base", "small", "medium"];
-    const qualityNames = ["Rapide", "Modéré", "Équilibré", "Haute"];
+    const qualityModels = ["tiny", "base", "small", "medium", "large-v3-turbo"];
+    const qualityNames = ["Rapide", "Modéré", "Équilibré", "Haute", "Maximale"];
     
     function updateQualityDisplay(value) {
         const index = parseInt(value);
@@ -123,12 +123,13 @@ if (qualitySlider) {
         });
         
         // Mettre à jour la couleur du curseur selon la position
-        // Gradient simple du vert (tiny) au rouge (medium)
+        // Gradient simple du vert (tiny) au violet (large-v3-turbo)
         const colors = [
             "#10b981",  // Tiny - vert
             "#3b82f6",  // Base - bleu
             "#f59e0b",  // Small - orange
-            "#ef4444"   // Medium - rouge
+            "#ef4444",  // Medium - rouge
+            "#8b5cf6"   // Large-v3-turbo - violet
         ];
         
         // Calculer le gradient : montrer la couleur jusqu'à la position actuelle
@@ -195,7 +196,7 @@ if (uploadSubmitBtn) {
         // Récupérer la qualité sélectionnée
         const qualitySlider = document.getElementById("upload-quality-slider");
         const qualityValue = qualitySlider?.value || "2";
-        const qualityModels = ["tiny", "base", "small", "medium"];
+        const qualityModels = ["tiny", "base", "small", "medium", "large-v3-turbo"];
         const whisperModel = qualityModels[parseInt(qualityValue)] || "small";
 
         if (!projectName || !apiKey) {
