@@ -195,8 +195,7 @@ class VocalyxAPIClient:
         diarization: bool = False,
         whisper_model: str = "small",
         enrichment: bool = False,
-        llm_model: Optional[str] = None,
-        enrichment_prompts: Optional[Dict[str, str]] = None
+        llm_model: Optional[str] = None
     ) -> Dict[str, Any]:
         """Crée une nouvelle transcription"""
         try:
@@ -209,12 +208,8 @@ class VocalyxAPIClient:
                 "enrichment": str(enrichment).lower()
             }
             
-            if enrichment:
-                if llm_model:
-                    data["llm_model"] = llm_model
-                if enrichment_prompts:
-                    import json
-                    data["enrichment_prompts"] = json.dumps(enrichment_prompts, ensure_ascii=False)
+            if enrichment and llm_model:
+                data["llm_model"] = llm_model
             
             headers = {"X-API-Key": api_key}
             

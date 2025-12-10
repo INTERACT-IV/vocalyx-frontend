@@ -378,39 +378,15 @@
                     <input type="checkbox" id="upload-enrichment" style="margin-right: 0.5rem;">
                     <label for="upload-enrichment" style="font-weight: normal; margin: 0;">Activer l'enrichissement (titre, résumé, score, bullet points) - Enrichissement de base</label>
                 </div>
-                <div style="display: flex; align-items: center; margin-top: 0.5rem; padding-left: 1.5rem;">
-                    <input type="checkbox" id="upload-text-correction" style="margin-right: 0.5rem;">
-                    <label for="upload-text-correction" style="font-weight: normal; margin: 0;">Correction du texte (orthographe, grammaire) - ⚠️ Option séparée et coûteuse</label>
-                </div>
                 
                 <div id="enrichment-options" style="margin-top: 1rem; padding-left: 1.5rem; border-left: 3px solid #4a90e2; display: none;">
                     <div class="form-group" style="margin-top: 0.5rem;">
                         <label for="upload-llm-model">Modèle LLM :</label>
                         <select id="upload-llm-model">
-                            <option value="phi-3-mini" selected>Phi-3-mini (rapide, 2.3 GB)</option>
-                            <option value="mistral-7b-instruct">Mistral-7B-Instruct v0.3 (équilibré, 4.1 GB)</option>
+                            <option value="mistral-7b-instruct" selected>Mistral-7B-Instruct v0.3 (équilibré, 4.1 GB)</option>
+                            <option value="phi-3-mini">Phi-3-mini (rapide, 2.3 GB)</option>
                         </select>
                         <small>Modèle depuis shared/models/enrichment/ ou nom de modèle recommandé</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Prompts personnalisés (optionnel) :</label>
-                        <details style="margin-top: 0.5rem;">
-                            <summary style="cursor: pointer; color: #4a90e2;">✏️ Éditer les prompts</summary>
-                            <div style="margin-top: 0.5rem;">
-                                <label for="enrichment-prompt-title" style="font-size: 0.9rem;">Prompt pour le titre :</label>
-                                <textarea id="enrichment-prompt-title" rows="2" style="width: 100%; font-size: 0.9rem; padding: 0.5rem;" placeholder="Génère un titre court et accrocheur (maximum 10 mots) pour cette transcription:"></textarea>
-                                
-                                <label for="enrichment-prompt-summary" style="font-size: 0.9rem; margin-top: 0.5rem; display: block;">Prompt pour le résumé :</label>
-                                <textarea id="enrichment-prompt-summary" rows="2" style="width: 100%; font-size: 0.9rem; padding: 0.5rem;" placeholder="Génère un résumé concis de moins de 100 mots pour cette transcription:"></textarea>
-                                
-                                <label for="enrichment-prompt-satisfaction" style="font-size: 0.9rem; margin-top: 0.5rem; display: block;">Prompt pour le score de satisfaction :</label>
-                                <textarea id="enrichment-prompt-satisfaction" rows="2" style="width: 100%; font-size: 0.9rem; padding: 0.5rem;" placeholder="Analyse cette transcription et attribue un score de satisfaction client de 1 à 10. Justifie brièvement ton score. Format JSON: {&quot;score&quot;: nombre, &quot;justification&quot;: &quot;texte&quot;}"></textarea>
-                                
-                                <label for="enrichment-prompt-bullets" style="font-size: 0.9rem; margin-top: 0.5rem; display: block;">Prompt pour les bullet points :</label>
-                                <textarea id="enrichment-prompt-bullets" rows="2" style="width: 100%; font-size: 0.9rem; padding: 0.5rem;" placeholder="Extrais les points clés de cette transcription sous forme de puces. Format JSON: {&quot;points&quot;: [&quot;point 1&quot;, &quot;point 2&quot;, ...]}"></textarea>
-                            </div>
-                        </details>
                     </div>
                 </div>
             </div>

@@ -118,7 +118,6 @@ async def upload_audio(
     whisper_model: str = Form("small"),
     enrichment: bool = Form(False),
     llm_model: Optional[str] = Form(None),
-    enrichment_prompts: Optional[str] = Form(None),
     token: str = Depends(get_current_token)
 ):
     """Upload un fichier audio pour transcription (proxy vers l'API)"""
@@ -128,15 +127,6 @@ async def upload_audio(
         # Lire le contenu du fichier
         file_content = await file.read()
         filename = file.filename or "audio.wav"
-        
-        # Parser les prompts d'enrichissement si fournis
-        enrichment_prompts_dict = None
-        if enrichment_prompts:
-            import json
-            try:
-                enrichment_prompts_dict = json.loads(enrichment_prompts)
-            except json.JSONDecodeError:
-                logger.warning(f"Invalid JSON format for enrichment_prompts: {enrichment_prompts}")
         
         # Appeler l'API pour créer la transcription
         result = await api_client.create_transcription(
@@ -148,8 +138,7 @@ async def upload_audio(
             diarization=diarization,
             whisper_model=whisper_model,
             enrichment=enrichment,
-            llm_model=llm_model,
-            enrichment_prompts=enrichment_prompts_dict
+            llm_model=llm_model
         )
         return JSONResponse(content=result, status_code=201)
     except Exception as e:
