@@ -209,74 +209,83 @@ function renderTranscriptionModal(data) {
         
         ${data.enrichment_requested ? `
         <div class="modal-tab-content" data-content="enrichment">
-            <div class="enrichment-container">
-                ${data.enrichment_status === 'done' && data.enrichment_data ? `
-                <div class="enrichment-section">
-                    <h3 class="enrichment-title">📊 Résultats de l'enrichissement</h3>
-                    
-                    ${data.enrichment_data.timing ? `
-                    <div class="enrichment-timing-info">
-                        <strong>⏱️ Temps d'enrichissement :</strong>
-                        <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
-                            <li>Titre : ${data.enrichment_data.timing.title_time || 0}s</li>
-                            <li>Résumé : ${data.enrichment_data.timing.summary_time || 0}s</li>
-                            <li>Score de satisfaction : ${data.enrichment_data.timing.satisfaction_time || 0}s</li>
-                            <li>Bullet points : ${data.enrichment_data.timing.bullet_points_time || 0}s</li>
-                            <li><strong>Total : ${data.enrichment_data.timing.total_time || data.enrichment_processing_time || 0}s</strong></li>
-                        </ul>
-                    </div>
-                    ` : data.enrichment_processing_time ? `
-                    <div class="enrichment-timing-info">
-                        <strong>⏱️ Temps d'enrichissement total :</strong> ${data.enrichment_processing_time.toFixed(2)}s
-                    </div>
-                    ` : ''}
-                    
-                    <div class="enrichment-item">
-                        <h4>📝 Titre${data.enrichment_data.timing ? ` <small style="color:#64748b;">(${data.enrichment_data.timing.title_time || 0}s)</small>` : ''}</h4>
-                        <div class="enrichment-value">${escapeHtml(data.enrichment_data.title || 'N/A')}</div>
-                    </div>
-                    
-                    <div class="enrichment-item">
-                        <h4>📄 Résumé${data.enrichment_data.timing ? ` <small style="color:#64748b;">(${data.enrichment_data.timing.summary_time || 0}s)</small>` : ''}</h4>
-                        <div class="enrichment-value">${escapeHtml(data.enrichment_data.summary || 'N/A')}</div>
-                    </div>
-                    
-                    <div class="enrichment-item">
-                        <h4>⭐ Score de satisfaction${data.enrichment_data.timing ? ` <small style="color:#64748b;">(${data.enrichment_data.timing.satisfaction_time || 0}s)</small>` : ''}</h4>
-                        <div class="satisfaction-score">
-                            <div class="score-value">${data.enrichment_data.satisfaction_score || 'N/A'}/10</div>
+            ${data.enrichment_status === 'done' && data.enrichment_data ? `
+            <div class="enrichment-view-container">
+                <div class="enrichment-view-header">
+                    <h3>📊 Résultats de l'enrichissement</h3>
+                </div>
+                <div class="enrichment-view-content">
+                    <div class="enrichment-container">
+                        ${data.enrichment_data.timing ? `
+                        <div class="enrichment-timing-info">
+                            <strong>⏱️ Temps d'enrichissement :</strong>
+                            <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                                <li>Titre : ${data.enrichment_data.timing.title_time || 0}s</li>
+                                <li>Résumé : ${data.enrichment_data.timing.summary_time || 0}s</li>
+                                <li>Score de satisfaction : ${data.enrichment_data.timing.satisfaction_time || 0}s</li>
+                                <li>Bullet points : ${data.enrichment_data.timing.bullet_points_time || 0}s</li>
+                                <li><strong>Total : ${data.enrichment_data.timing.total_time || data.enrichment_processing_time || 0}s</strong></li>
+                            </ul>
                         </div>
-                    </div>
-                    
-                    <div class="enrichment-item">
-                        <h4>🔹 Points clés${data.enrichment_data.timing ? ` <small style="color:#64748b;">(${data.enrichment_data.timing.bullet_points_time || 0}s)</small>` : ''}</h4>
-                        <ul class="bullet-points">
-                            ${(data.enrichment_data.bullet_points || []).map(point => `<li>${escapeHtml(point)}</li>`).join('') || '<li>Aucun point clé disponible</li>'}
-                        </ul>
+                        ` : data.enrichment_processing_time ? `
+                        <div class="enrichment-timing-info">
+                            <strong>⏱️ Temps d'enrichissement total :</strong> ${data.enrichment_processing_time.toFixed(2)}s
+                        </div>
+                        ` : ''}
+                        
+                        <div class="enrichment-item">
+                            <h4>📝 Titre${data.enrichment_data.timing ? ` <small style="color:#64748b;">(${data.enrichment_data.timing.title_time || 0}s)</small>` : ''}</h4>
+                            <div class="enrichment-value">${escapeHtml(data.enrichment_data.title || 'N/A')}</div>
+                        </div>
+                        
+                        <div class="enrichment-item">
+                            <h4>📄 Résumé${data.enrichment_data.timing ? ` <small style="color:#64748b;">(${data.enrichment_data.timing.summary_time || 0}s)</small>` : ''}</h4>
+                            <div class="enrichment-value">${escapeHtml(data.enrichment_data.summary || 'N/A')}</div>
+                        </div>
+                        
+                        <div class="enrichment-item">
+                            <h4>⭐ Score de satisfaction${data.enrichment_data.timing ? ` <small style="color:#64748b;">(${data.enrichment_data.timing.satisfaction_time || 0}s)</small>` : ''}</h4>
+                            <div class="satisfaction-score">
+                                <div class="score-value">${data.enrichment_data.satisfaction_score || 'N/A'}/10</div>
+                            </div>
+                        </div>
+                        
+                        <div class="enrichment-item">
+                            <h4>🔹 Points clés${data.enrichment_data.timing ? ` <small style="color:#64748b;">(${data.enrichment_data.timing.bullet_points_time || 0}s)</small>` : ''}</h4>
+                            <ul class="bullet-points">
+                                ${(data.enrichment_data.bullet_points || []).map(point => `<li>${escapeHtml(point)}</li>`).join('') || '<li>Aucun point clé disponible</li>'}
+                            </ul>
+                        </div>
+                        
+                        ${data.llm_model ? `
+                        <div class="enrichment-metadata">
+                            <small>Modèle LLM utilisé: <code>${escapeHtml(data.llm_model)}</code></small>
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
-                ` : data.enrichment_status === 'processing' ? `
+            </div>
+            ` : data.enrichment_status === 'processing' ? `
+            <div class="enrichment-container">
                 <div class="enrichment-status">
                     <div class="loading-spinner"></div>
                     <p>⏳ Enrichissement en cours...</p>
                     <small>Worker: ${escapeHtml(data.enrichment_worker_id || 'N/A')}</small>
                 </div>
-                ` : data.enrichment_status === 'error' ? `
+            </div>
+            ` : data.enrichment_status === 'error' ? `
+            <div class="enrichment-container">
                 <div class="error-box">
                     <strong>❌ Erreur d'enrichissement:</strong> ${escapeHtml(data.enrichment_error || 'Erreur inconnue')}
                 </div>
-                ` : `
+            </div>
+            ` : `
+            <div class="enrichment-container">
                 <div class="enrichment-status">
                     <p>⏳ Enrichissement en attente...</p>
                 </div>
-                `}
-                
-                ${data.llm_model ? `
-                <div class="enrichment-metadata">
-                    <small>Modèle LLM utilisé: <code>${escapeHtml(data.llm_model)}</code></small>
-                </div>
-                ` : ''}
             </div>
+            `}
         </div>
         ` : ''}
         

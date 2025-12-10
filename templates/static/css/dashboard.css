@@ -1963,14 +1963,16 @@ button:focus, [tabindex="0"]:focus {
 .segments-list::-webkit-scrollbar,
 #highlighted-text::-webkit-scrollbar,
 .text-view-content::-webkit-scrollbar,
-.json-view-content::-webkit-scrollbar {
+.json-view-content::-webkit-scrollbar,
+.enrichment-view-content::-webkit-scrollbar {
   width: 8px;
 }
 .modal-tab-content::-webkit-scrollbar-track,
 .segments-list::-webkit-scrollbar-track,
 #highlighted-text::-webkit-scrollbar-track,
 .text-view-content::-webkit-scrollbar-track,
-.json-view-content::-webkit-scrollbar-track {
+.json-view-content::-webkit-scrollbar-track,
+.enrichment-view-content::-webkit-scrollbar-track {
   background: #f1f5f9;
   border-radius: 4px;
 }
@@ -1978,7 +1980,8 @@ button:focus, [tabindex="0"]:focus {
 .segments-list::-webkit-scrollbar-thumb,
 #highlighted-text::-webkit-scrollbar-thumb,
 .text-view-content::-webkit-scrollbar-thumb,
-.json-view-content::-webkit-scrollbar-thumb {
+.json-view-content::-webkit-scrollbar-thumb,
+.enrichment-view-content::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 4px;
 }
@@ -1986,7 +1989,8 @@ button:focus, [tabindex="0"]:focus {
 .segments-list::-webkit-scrollbar-thumb:hover,
 #highlighted-text::-webkit-scrollbar-thumb:hover,
 .text-view-content::-webkit-scrollbar-thumb:hover,
-.json-view-content::-webkit-scrollbar-thumb:hover {
+.json-view-content::-webkit-scrollbar-thumb:hover,
+.enrichment-view-content::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
 .btn-sm {
@@ -1996,7 +2000,8 @@ button:focus, [tabindex="0"]:focus {
 
 /* TEXT VIEW */
 .text-view-container,
-.json-view-container {
+.json-view-container,
+.enrichment-view-container {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -2008,7 +2013,8 @@ button:focus, [tabindex="0"]:focus {
   overflow: hidden;
 }
 .text-view-header,
-.json-view-header {
+.json-view-header,
+.enrichment-view-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -2018,7 +2024,8 @@ button:focus, [tabindex="0"]:focus {
   flex-shrink: 0;
 }
 .text-view-header h3,
-.json-view-header h3 {
+.json-view-header h3,
+.enrichment-view-header h3 {
   margin: 0;
   font-size: 1.1rem;
   color: #1e293b;
@@ -2028,7 +2035,8 @@ button:focus, [tabindex="0"]:focus {
   gap: 0.5rem;
 }
 .text-view-content,
-.json-view-content {
+.json-view-content,
+.enrichment-view-content {
   flex: 1;
   overflow-y: auto;
   overflow-x: auto;
