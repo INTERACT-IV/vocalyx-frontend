@@ -1,0 +1,42 @@
+# =====================================================================
+# Vocalyx Dashboard - Configuration File
+# =====================================================================
+
+[API]
+# URL de l'API centrale vocalyx-api
+# En local: http://localhost:8000
+# En Docker: http://vocalyx-api:8000
+url = http://localhost:8000
+
+# Port utilisé pour la connexion WebSocket (l'hôte est toujours window.location.hostname côté frontend)
+# Exemple local: 8000
+# Exemple Docker: 8000 (avec hostname du navigateur pointant vers la gateway)
+ws_port = 8000
+
+# Timeout des requêtes HTTP (en secondes)
+timeout = 30
+
+[SECURITY]
+# Clé secrète pour la communication avec l'API (DOIT être identique à vocalyx-api)
+# ⚠️ CHANGER CETTE VALEUR EN PRODUCTION
+internal_api_key = SuperSecretCode123
+
+# Nom du projet administrateur (pour la gestion des projets)
+admin_project_name = ISICOMTECH
+
+[PATHS]
+# Répertoire des templates HTML
+templates_dir = templates
+
+[LOGGING]
+# Niveau de log: DEBUG, INFO, WARNING, ERROR, CRITICAL
+level = INFO
+
+# Activer les logs dans un fichier
+file_enabled = true
+
+# Chemin du fichier de log
+file_path = /home/shinohk/code/vocalyx-all/shared/logs/vocalyx-frontend.log
+
+# Activer les couleurs dans la console
+colored = true
