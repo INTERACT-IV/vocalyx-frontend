@@ -33,7 +33,6 @@ class Config:
         }
         
         config['SECURITY'] = {
-            'internal_api_key': 'CHANGE_ME_SECRET_INTERNAL_KEY_12345',
             'admin_project_name': 'ISICOMTECH'
         }
         
@@ -78,17 +77,10 @@ class Config:
             self.ws_port = 8000
         
         # SECURITY
-        self.internal_api_key = os.environ.get(
-            'INTERNAL_API_KEY', 
-            self.config.get('SECURITY', 'internal_api_key')
-        )
         self.admin_project_name = os.environ.get(
             'ADMIN_PROJECT_NAME', 
             self.config.get('SECURITY', 'admin_project_name')
         )
-        
-        if self.internal_api_key == 'CHANGE_ME_SECRET_INTERNAL_KEY_12345':
-            logging.warning("⚠️ SECURITY: Internal API key is using default value. Please change it!")
         
         # PATHS
         self.templates_dir = self.config.get('PATHS', 'templates_dir')

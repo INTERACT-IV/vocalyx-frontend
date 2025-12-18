@@ -18,7 +18,6 @@ class VocalyxAPIClient:
     
     def __init__(self, config: Config):
         self.base_url = config.api_url.rstrip('/')
-        self.internal_key = config.internal_api_key
         self.timeout = httpx.Timeout(30.0, connect=5.0)
         
         # Client synchrone pour les routes FastAPI
@@ -29,11 +28,9 @@ class VocalyxAPIClient:
         
         logger.info(f"API Client initialized: {self.base_url}")
     
-    def _get_headers(self, internal: bool = True, jwt_token: str = None) -> Dict[str, str]:
+    def _get_headers(self, jwt_token: str = None) -> Dict[str, str]:
         """Génère les headers d'authentification"""
         headers = {}
-        if internal:
-            headers["X-Internal-Key"] = self.internal_key
         if jwt_token:
             headers["Authorization"] = f"Bearer {jwt_token}"
         return headers
@@ -69,7 +66,7 @@ class VocalyxAPIClient:
     def get_user_profile(self, jwt_token: str) -> Dict[str, Any]:
         """Récupère les informations du profil utilisateur (synchrone - compatibilité)"""
         try:
-            headers = self._get_headers(internal=False, jwt_token=jwt_token)
+            headers = self._get_headers(jwt_token=jwt_token)
             response = self.client.get(
                 f"{self.base_url}/api/user/me",
                 headers=headers
@@ -83,7 +80,7 @@ class VocalyxAPIClient:
     def get_user_projects(self, jwt_token: str) -> List[Dict[str, Any]]:
         """Récupère la liste des projets (synchrone - compatibilité)"""
         try:
-            headers = self._get_headers(internal=False, jwt_token=jwt_token)
+            headers = self._get_headers(jwt_token=jwt_token)
             response = self.client.get(
                 f"{self.base_url}/api/user/projects",
                 headers=headers
@@ -98,7 +95,7 @@ class VocalyxAPIClient:
     async def get_user_profile_async(self, jwt_token: str) -> Dict[str, Any]:
         """[Async] Récupère les informations du profil utilisateur courant"""
         try:
-            headers = self._get_headers(internal=False, jwt_token=jwt_token)
+            headers = self._get_headers(jwt_token=jwt_token)
             response = await self.async_client.get(
                 f"{self.base_url}/api/user/me",
                 headers=headers
@@ -112,7 +109,7 @@ class VocalyxAPIClient:
     async def get_user_projects_async(self, jwt_token: str) -> List[Dict[str, Any]]:
         """[Async] Récupère la liste des projets accessibles pour l'utilisateur courant"""
         try:
-            headers = self._get_headers(internal=False, jwt_token=jwt_token)
+            headers = self._get_headers(jwt_token=jwt_token)
             response = await self.async_client.get(
                 f"{self.base_url}/api/user/projects",
                 headers=headers
@@ -126,7 +123,7 @@ class VocalyxAPIClient:
     async def get_admin_api_key_async(self, jwt_token: str) -> Dict[str, Any]:
         """[Async] Appelle l'API backend pour obtenir la clé API admin en utilisant un JWT"""
         try:
-            headers = self._get_headers(internal=False, jwt_token=jwt_token)
+            headers = self._get_headers(jwt_token=jwt_token)
             response = await self.async_client.get(
                 f"{self.base_url}/api/admin/admin-api-key",
                 headers=headers
@@ -244,7 +241,7 @@ class VocalyxAPIClient:
             if search:
                 params["search"] = search
 
-            headers = self._get_headers(internal=False, jwt_token=jwt_token)
+            headers = self._get_headers(jwt_token=jwt_token)
             response = self.client.get(
                 f"{self.base_url}/api/user/transcriptions",
                 params=params,
@@ -273,7 +270,7 @@ class VocalyxAPIClient:
             if search:
                 params["search"] = search
 
-            headers = self._get_headers(internal=False, jwt_token=jwt_token)
+            headers = self._get_headers(jwt_token=jwt_token)
             response = self.client.get(
                 f"{self.base_url}/api/user/transcriptions/count",
                 params=params,
@@ -288,7 +285,7 @@ class VocalyxAPIClient:
     def get_user_transcription(self, jwt_token: str, transcription_id: str) -> Dict[str, Any]:
         """Récupère une transcription à laquelle l'utilisateur peut accéder"""
         try:
-            headers = self._get_headers(internal=False, jwt_token=jwt_token)
+            headers = self._get_headers(jwt_token=jwt_token)
             response = self.client.get(
                 f"{self.base_url}/api/user/transcriptions/{transcription_id}",
                 headers=headers
@@ -299,12 +296,13 @@ class VocalyxAPIClient:
             logger.error(f"Error getting user transcription: {e}")
             raise
     
-    def delete_transcription(self, transcription_id: str) -> Dict[str, Any]:
-        """Supprime une transcription (nécessite clé interne)"""
+    def delete_transcription(self, transcription_id: str, jwt_token: str) -> Dict[str, Any]:
+        """Supprime une transcription (nécessite un JWT token)"""
         try:
+            headers = self._get_headers(jwt_token=jwt_token)
             response = self.client.delete(
-                f"{self.base_url}/api/transcriptions/{transcription_id}",
-                headers=self._get_headers()
+                f"{self.base_url}/api/user/transcriptions/{transcription_id}",
+                headers=headers
             )
             response.raise_for_status()
             return response.json()
@@ -396,12 +394,13 @@ class VocalyxAPIClient:
     # WORKERS & HEALTH
     # ========================================================================
     
-    def get_workers_status(self) -> Dict[str, Any]:
-        """Récupère le statut des workers Celery"""
+    def get_workers_status(self, jwt_token: str) -> Dict[str, Any]:
+        """Récupère le statut des workers Celery (nécessite un JWT token admin)"""
         try:
+            headers = self._get_headers(jwt_token=jwt_token)
             response = self.client.get(
-                f"{self.base_url}/api/workers",
-                headers=self._get_headers()
+                f"{self.base_url}/api/admin/workers",
+                headers=headers
             )
             response.raise_for_status()
             return response.json()

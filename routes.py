@@ -222,7 +222,7 @@ async def delete_transcription(
     
     try:
         ensure_admin_access(api_client, token)
-        result = api_client.delete_transcription(transcription_id)
+        result = api_client.delete_transcription(transcription_id, jwt_token=token)
         return JSONResponse(content=result)
     except Exception as e:
         logger.error(f"Error deleting transcription: {e}")
@@ -242,7 +242,7 @@ async def get_workers_status(
     
     try:
         ensure_admin_access(api_client, token)
-        status = api_client.get_workers_status()
+        status = api_client.get_workers_status(jwt_token=token)
         return JSONResponse(content=status)
     except Exception as e:
         logger.error(f"Error getting workers status: {e}")
