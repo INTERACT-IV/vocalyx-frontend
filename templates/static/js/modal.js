@@ -98,6 +98,9 @@ function renderTranscriptionModal(data) {
             <button class="modal-tab" data-tab="text">
                 <span style="margin-right:0.5rem;">📝</span>Texte brut
             </button>
+            <button class="modal-tab" data-tab="metrics">
+                <span style="margin-right:0.5rem;">📊</span>Métriques
+            </button>
             <button class="modal-tab" data-tab="json">
                 <span style="margin-right:0.5rem;">🔧</span>JSON
             </button>
@@ -153,9 +156,16 @@ function renderTranscriptionModal(data) {
                         <span class="info-label">Durée audio:</span>
                         <span class="info-value highlight-value">${data.duration ? formatDuration(data.duration) : '-'}</span>
                     </div>
+                    ${data.queue_wait_time ? `
                     <div class="info-item">
-                        <span class="info-label">Temps de transcription:</span>
+                        <span class="info-label">Temps d'attente (file):</span>
+                        <span class="info-value" style="color: #ff9800;">${formatDuration(data.queue_wait_time)}</span>
+                    </div>
+                    ` : ''}
+                    <div class="info-item">
+                        <span class="info-label">Temps de traitement réel:</span>
                         <span class="info-value highlight-value">${data.processing_time ? formatDuration(data.processing_time) : '-'}</span>
+                        <small style="color: #64748b; display: block; margin-top: 0.25rem;">(sans temps d'attente)</small>
                     </div>
                     ${data.enrichment_requested ? `
                     <div class="info-item">
@@ -193,6 +203,24 @@ function renderTranscriptionModal(data) {
                         <span class="info-label">Créé:</span>
                         <span class="info-value">${formatHumanDate(data.created_at)}</span>
                     </div>
+                    ${data.queued_at ? `
+                    <div class="info-item">
+                        <span class="info-label">En file (Celery):</span>
+                        <span class="info-value">${formatHumanDate(data.queued_at)}</span>
+                    </div>
+                    ` : ''}
+                    ${data.processing_start_time ? `
+                    <div class="info-item">
+                        <span class="info-label">Début traitement:</span>
+                        <span class="info-value">${formatHumanDate(data.processing_start_time)}</span>
+                    </div>
+                    ` : ''}
+                    ${data.processing_end_time ? `
+                    <div class="info-item">
+                        <span class="info-label">Fin traitement:</span>
+                        <span class="info-value">${formatHumanDate(data.processing_end_time)}</span>
+                    </div>
+                    ` : ''}
                     <div class="info-item">
                         <span class="info-label">Terminé:</span>
                         <span class="info-value">${formatHumanDate(data.finished_at)}</span>
@@ -315,6 +343,87 @@ function renderTranscriptionModal(data) {
                 </div>
                 <div class="text-view-content">
                     <pre>${escapeHtml(fullText)}</pre>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-tab-content" data-content="metrics">
+            <div class="metrics-view-container">
+                <div class="metrics-view-header">
+                    <h3>📊 Métriques de Performance</h3>
+                </div>
+                <div class="metrics-view-content">
+                    <div class="metrics-grid">
+                        ${data.queue_wait_time ? `
+                        <div class="metric-card">
+                            <div class="metric-label">⏳ Temps d'attente (file)</div>
+                            <div class="metric-value" style="color: #ff9800;">${formatDuration(data.queue_wait_time)}</div>
+                            <div class="metric-description">Temps passé dans la file Celery avant traitement</div>
+                        </div>
+                        ` : ''}
+                        ${data.processing_time ? `
+                        <div class="metric-card">
+                            <div class="metric-label">⚙️ Temps de traitement réel</div>
+                            <div class="metric-value" style="color: #4a90e2;">${formatDuration(data.processing_time)}</div>
+                            <div class="metric-description">Temps réel de traitement (sans attente)</div>
+                        </div>
+                        ` : ''}
+                        ${data.queue_wait_time && data.processing_time ? `
+                        <div class="metric-card">
+                            <div class="metric-label">⏱️ Temps total</div>
+                            <div class="metric-value" style="color: #28a745;">${formatDuration(data.queue_wait_time + data.processing_time)}</div>
+                            <div class="metric-description">Attente + Traitement</div>
+                        </div>
+                        ` : ''}
+                        ${data.queue_wait_time && data.processing_time ? `
+                        <div class="metric-card">
+                            <div class="metric-label">📈 Ratio attente/traitement</div>
+                            <div class="metric-value" style="color: #6c757d;">${(data.queue_wait_time / data.processing_time).toFixed(2)}x</div>
+                            <div class="metric-description">${data.queue_wait_time > data.processing_time ? '⚠️ Plus de temps en attente qu\'en traitement' : '✅ Traitement plus long que l\'attente'}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="metrics-timeline" style="margin-top: 2rem;">
+                        <h4 style="margin-bottom: 1rem;">⏱️ Timeline</h4>
+                        <div class="timeline-item">
+                            <span class="timeline-label">Créé:</span>
+                            <span class="timeline-value">${formatHumanDate(data.created_at)}</span>
+                        </div>
+                        ${data.queued_at ? `
+                        <div class="timeline-item">
+                            <span class="timeline-label">En file (Celery):</span>
+                            <span class="timeline-value">${formatHumanDate(data.queued_at)}</span>
+                            ${data.created_at && data.queued_at ? `
+                            <span class="timeline-duration" style="color: #ff9800;">+${formatDuration((new Date(data.queued_at) - new Date(data.created_at)) / 1000)}</span>
+                            ` : ''}
+                        </div>
+                        ` : ''}
+                        ${data.processing_start_time ? `
+                        <div class="timeline-item">
+                            <span class="timeline-label">Début traitement:</span>
+                            <span class="timeline-value">${formatHumanDate(data.processing_start_time)}</span>
+                            ${data.queued_at && data.processing_start_time ? `
+                            <span class="timeline-duration" style="color: #ff9800;">+${formatDuration((new Date(data.processing_start_time) - new Date(data.queued_at)) / 1000)} (attente)</span>
+                            ` : ''}
+                        </div>
+                        ` : ''}
+                        ${data.processing_end_time ? `
+                        <div class="timeline-item">
+                            <span class="timeline-label">Fin traitement:</span>
+                            <span class="timeline-value">${formatHumanDate(data.processing_end_time)}</span>
+                            ${data.processing_start_time && data.processing_end_time ? `
+                            <span class="timeline-duration" style="color: #4a90e2;">+${formatDuration((new Date(data.processing_end_time) - new Date(data.processing_start_time)) / 1000)} (traitement)</span>
+                            ` : ''}
+                        </div>
+                        ` : ''}
+                        ${data.finished_at ? `
+                        <div class="timeline-item">
+                            <span class="timeline-label">Terminé:</span>
+                            <span class="timeline-value">${formatHumanDate(data.finished_at)}</span>
+                        </div>
+                        ` : ''}
+                    </div>
                 </div>
             </div>
         </div>

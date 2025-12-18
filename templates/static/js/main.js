@@ -585,6 +585,12 @@ function updateTranscriptionInUI(transcription) {
             durationCell.textContent = transcription.duration ? transcription.duration.toFixed(1) + 's' : '-';
         }
         
+        // ✅ NOUVEAU : Mettre à jour le temps d'attente
+        const waitCell = row.querySelector('.col-wait');
+        if (waitCell) {
+            waitCell.textContent = transcription.queue_wait_time ? formatDuration(transcription.queue_wait_time) : '-';
+        }
+        
         const processCell = row.querySelector('.col-process');
         if (processCell) {
             const transcriptionTime = transcription.processing_time || 0;
@@ -718,6 +724,7 @@ function statusToBadge(status) {
   let label = '-', cls = 'badge-status';
   switch (status) {
     case 'pending': label='En attente'; cls+=' badge-pending'; break;
+    case 'queued': label='En file'; cls+=' badge-queued'; break;  // ✅ NOUVEAU
     case 'processing': label='En cours'; cls+=' badge-processing'; break;
     case 'transcribed': label='Transcrit'; cls+=' badge-transcribed'; break;
     case 'done': label='Terminé'; cls+=' badge-done'; break;
@@ -815,6 +822,9 @@ function renderTranscriptions(transcriptions, countData, filters) {
       processingTimeDisplay = entry.processing_time ? `${transcriptionTime.toFixed(1)}s` : '-';
     }
     
+    // ✅ NOUVEAU : Afficher le temps d'attente dans la file
+    const queueWaitTimeDisplay = entry.queue_wait_time ? formatDuration(entry.queue_wait_time) : '-';
+    
     row.innerHTML = `
       <td class="col-status">${statusToBadge(entry.status)}</td>
       <td class="col-project">${escapeHtml(entry.project_name || 'N/A')}</td>
@@ -823,7 +833,8 @@ function renderTranscriptions(transcriptions, countData, filters) {
       <td class="col-worker-enrichment">${escapeHtml(entry.enrichment_worker_id || '-')}</td>
       <td class="col-lang">${escapeHtml(entry.language || '...')}</td>
       <td class="col-duree dur-group" title="Durée totale de l'audio en secondes">${entry.duration ? entry.duration.toFixed(1) + 's' : '-'}</td>
-      <td class="col-process dur-group" title="Temps de traitement total (transcription + enrichissement) en secondes">${processingTimeDisplay}</td>
+      <td class="col-wait dur-group" title="Temps d'attente dans la file Celery (secondes)">${queueWaitTimeDisplay}</td>
+      <td class="col-process dur-group" title="Temps de traitement réel (sans attente) en secondes">${processingTimeDisplay}</td>
       <td class="col-date" title="${formatHumanDate(entry.created_at)}">${formatHumanDate(entry.created_at)}</td>
       <td class="col-actions"><button class="btn-delete btn btn-danger" title="Supprimer la transcription">Supprimer</button></td>`;
     fragment.appendChild(row);
@@ -1243,6 +1254,8 @@ async function setActiveView(view) {
         await loadUsersList();
     } else if (currentView === "projects") {
         await populateProjectFilters();
+    } else if (currentView === "statistics") {
+        await loadPerformanceMetrics();
     }
     
     let now = new Date();
@@ -1682,7 +1695,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
 });
 
-// CTA HERO:"Nouvelle transcription" click event (ouvre la modale)
+    // CTA HERO:"Nouvelle transcription" click event (ouvre la modale)
 document.addEventListener('DOMContentLoaded', () => {
   const ctaBtn = document.getElementById('cta-transcribe-btn');
   if (ctaBtn) {
@@ -1692,4 +1705,90 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById("upload-project-select").dispatchEvent(new Event('change'));
     });
   }
+  
+  // ✅ NOUVEAU : Bouton de rafraîchissement des métriques
+  const refreshMetricsBtn = document.getElementById('refresh-metrics-btn');
+  if (refreshMetricsBtn) {
+    refreshMetricsBtn.addEventListener('click', async () => {
+      await loadPerformanceMetrics();
+    });
+  }
 });
+
+/**
+ * ✅ NOUVEAU : Charge et affiche les métriques de performance
+ */
+async function loadPerformanceMetrics() {
+    const container = document.getElementById('performance-metrics-container');
+    if (!container) return;
+    
+    container.innerHTML = '<p style="text-align: center; color: #64748b;">Chargement des métriques...</p>';
+    
+    try {
+        const metrics = await api.getTranscriptionMetrics();
+        
+        if (!metrics || metrics.total_transcriptions === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #64748b; padding: 2rem;">Aucune métrique disponible pour le moment.</p>';
+            return;
+        }
+        
+        const metricsHtml = `
+            <div class="metrics-summary-grid">
+                <div class="metric-summary-card">
+                    <div class="metric-summary-label">Total transcriptions</div>
+                    <div class="metric-summary-value">${metrics.total_transcriptions}</div>
+                </div>
+                <div class="metric-summary-card">
+                    <div class="metric-summary-label">⏳ Temps d'attente moyen</div>
+                    <div class="metric-summary-value" style="color: #ff9800;">${formatDuration(metrics.avg_queue_wait_time)}</div>
+                    <div class="metric-summary-detail">Min: ${formatDuration(metrics.min_queue_wait_time)} | Max: ${formatDuration(metrics.max_queue_wait_time)}</div>
+                </div>
+                <div class="metric-summary-card">
+                    <div class="metric-summary-label">⚙️ Temps de traitement moyen</div>
+                    <div class="metric-summary-value" style="color: #4a90e2;">${formatDuration(metrics.avg_processing_time)}</div>
+                    <div class="metric-summary-detail">Min: ${formatDuration(metrics.min_processing_time)} | Max: ${formatDuration(metrics.max_processing_time)}</div>
+                </div>
+                <div class="metric-summary-card">
+                    <div class="metric-summary-label">⏱️ Temps total moyen</div>
+                    <div class="metric-summary-value" style="color: #28a745;">${formatDuration(metrics.avg_total_time)}</div>
+                    <div class="metric-summary-detail">Attente + Traitement</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 2rem;">
+                <h3 style="margin-bottom: 1rem;">Distribution des temps de traitement</h3>
+                <div class="distribution-grid">
+                    ${Object.entries(metrics.processing_time_distribution || {}).map(([range, count]) => `
+                        <div class="distribution-item">
+                            <span class="distribution-range">${range}</span>
+                            <div class="distribution-bar">
+                                <div class="distribution-bar-fill" style="width: ${(count / metrics.total_transcriptions) * 100}%"></div>
+                            </div>
+                            <span class="distribution-count">${count}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <div style="margin-top: 2rem;">
+                <h3 style="margin-bottom: 1rem;">Distribution des temps d'attente</h3>
+                <div class="distribution-grid">
+                    ${Object.entries(metrics.queue_wait_time_distribution || {}).map(([range, count]) => `
+                        <div class="distribution-item">
+                            <span class="distribution-range">${range}</span>
+                            <div class="distribution-bar">
+                                <div class="distribution-bar-fill" style="width: ${(count / metrics.total_transcriptions) * 100}%; background: #ff9800;"></div>
+                            </div>
+                            <span class="distribution-count">${count}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = metricsHtml;
+    } catch (err) {
+        console.error('Erreur lors du chargement des métriques:', err);
+        container.innerHTML = `<p style="text-align: center; color: #dc3545; padding: 2rem;">Erreur: ${err.message}</p>`;
+    }
+}

@@ -342,6 +342,31 @@ class VocalyxDashboardAPI {
         });
         return this._handleResponse(response);
     }
+
+    // ========================================================================
+    // MÉTRIQUES (NOUVEAU)
+    // ========================================================================
+    
+    async getTranscriptionMetrics(startDate = null, endDate = null, project = null) {
+        const params = new URLSearchParams();
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+        if (project) params.append('project', project);
+        
+        const response = await fetch(`${this.baseURL}/api/transcriptions/metrics?${params}`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+        return this._handleResponse(response);
+    }
+    
+    async getTTLHealth(transcriptionId) {
+        const response = await fetch(`${this.baseURL}/api/transcriptions/${transcriptionId}/ttl-health`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+        return this._handleResponse(response);
+    }
 }
 
 // Exporter l'instance globale
