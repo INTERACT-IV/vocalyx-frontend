@@ -208,4 +208,5 @@ __marimo__/
 
 tmp_uploads/
 
-config.ini
+config.ini*.bk
+config.initest
