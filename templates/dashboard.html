@@ -385,6 +385,19 @@
                     <input type="checkbox" id="upload-use-diarization">
                     <label for="upload-use-diarization" style="display: inline-block; font-weight: normal; margin-left: 0.5rem;">Activer la diarisation (identification des locuteurs)</label>
                 </div>
+                <div style="margin-top: 1rem;">
+                    <label for="upload-initial-prompt" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Prompt de contexte (optionnel)  ℹ️</label>
+                    <textarea 
+                        id="upload-initial-prompt" 
+                        rows="3" 
+                        placeholder="Ex: Conversation entre un agent de service client et un client."
+                        style="width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px; font-family: inherit; font-size: 0.9rem; resize: vertical;"
+                        title="Fournissez un contexte pour améliorer la qualité de la transcription (ex: conversation service client, consultation médicale, entretien juridique)"></textarea>
+                    <small style="color: #64748b; display: block; margin-top: 0.25rem;">
+                        💡 <strong>Aide Whisper à mieux transcrire :</strong> Décrivez le type de conversation (service client, médical, juridique, technique...). 
+                        Cela améliore la reconnaissance des termes spécialisés.
+                    </small>
+                </div>
             </div>
             
             <div class="form-group upload-step">Étape 5 : Enrichissement (optionnel)</div>
