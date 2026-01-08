@@ -191,6 +191,7 @@ class VocalyxAPIClient:
         use_vad: bool = True,
         diarization: bool = False,
         whisper_model: str = "small",
+        initial_prompt: Optional[str] = None,
         enrichment: bool = False,
         llm_model: Optional[str] = None
     ) -> Dict[str, Any]:
@@ -201,11 +202,13 @@ class VocalyxAPIClient:
                 "project_name": project_name,
                 "use_vad": str(use_vad).lower(),
                 "diarization": str(diarization).lower(),
-                "whisper_model": whisper_model,
-                "enrichment": str(enrichment).lower()
+                "whisper_model": whisper_model
             }
-            
-            if enrichment and llm_model:
+            if initial_prompt:
+                data["initial_prompt"] = initial_prompt
+            if enrichment:
+                data["enrichment"] = str(enrichment).lower()
+            if llm_model:
                 data["llm_model"] = llm_model
             
             headers = {"X-API-Key": api_key}
