@@ -197,7 +197,7 @@ class VocalyxDashboardAPI {
     // TRANSCRIPTIONS
     // ========================================================================
     
-    async uploadAudio(file, projectName, apiKey, useVad = true, useDiarization = false, whisperModel = "small", enrichment = false, llmModel = null) {
+    async uploadAudio(file, projectName, apiKey, useVad = true, useDiarization = false, whisperModel = "small", enrichment = false, llmModel = null, initialPrompt = null) {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('project_name', projectName);
@@ -209,6 +209,10 @@ class VocalyxDashboardAPI {
         
         if (enrichment && llmModel) {
             formData.append('llm_model', llmModel);
+        }
+        
+        if (initialPrompt) {
+            formData.append('initial_prompt', initialPrompt);
         }
         
         const response = await fetch(`${this.baseURL}/api/upload`, {

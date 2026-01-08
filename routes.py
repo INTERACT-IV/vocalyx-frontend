@@ -116,6 +116,7 @@ async def upload_audio(
     use_vad: bool = Form(True),
     diarization: bool = Form(False),
     whisper_model: str = Form("small"),
+    initial_prompt: Optional[str] = Form(None),
     enrichment: bool = Form(False),
     llm_model: Optional[str] = Form(None),
     token: str = Depends(get_current_token)
@@ -137,6 +138,7 @@ async def upload_audio(
             use_vad=use_vad,
             diarization=diarization,
             whisper_model=whisper_model,
+            initial_prompt=initial_prompt,
             enrichment=enrichment,
             llm_model=llm_model
         )

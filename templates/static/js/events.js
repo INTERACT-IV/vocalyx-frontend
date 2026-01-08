@@ -192,6 +192,7 @@ if (uploadSubmitBtn) {
         const useDiarization = document.getElementById("upload-use-diarization")?.checked;
         const enrichment = document.getElementById("upload-enrichment")?.checked || false;
         const llmModel = enrichment ? (document.getElementById("upload-llm-model")?.value || null) : null;
+        const initialPrompt = document.getElementById("upload-initial-prompt")?.value?.trim() || null;
         
         // Récupérer la qualité sélectionnée
         const qualitySlider = document.getElementById("upload-quality-slider");
@@ -209,7 +210,7 @@ if (uploadSubmitBtn) {
         
         try {
             // L'upload reste en HTTP, c'est normal
-            const result = await api.uploadAudio(file, projectName, apiKey, useVad, useDiarization, whisperModel, enrichment, llmModel);
+            const result = await api.uploadAudio(file, projectName, apiKey, useVad, useDiarization, whisperModel, enrichment, llmModel, initialPrompt);
             
             showToast(`✅ Upload (Projet: ${projectName}) réussi !`, "success");
             

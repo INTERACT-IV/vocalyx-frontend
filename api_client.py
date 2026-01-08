@@ -191,7 +191,10 @@ class VocalyxAPIClient:
         filename: str,
         use_vad: bool = True,
         diarization: bool = False,
-        whisper_model: str = "small"
+        whisper_model: str = "small",
+        initial_prompt: Optional[str] = None,
+        enrichment: bool = False,
+        llm_model: Optional[str] = None
     ) -> Dict[str, Any]:
         """Crée une nouvelle transcription"""
         try:
@@ -202,6 +205,12 @@ class VocalyxAPIClient:
                 "diarization": str(diarization).lower(),
                 "whisper_model": whisper_model
             }
+            if initial_prompt:
+                data["initial_prompt"] = initial_prompt
+            if enrichment:
+                data["enrichment"] = str(enrichment).lower()
+            if llm_model:
+                data["llm_model"] = llm_model
             headers = {"X-API-Key": api_key}
             
             response = await self.async_client.post(
