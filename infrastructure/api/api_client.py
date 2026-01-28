@@ -190,7 +190,7 @@ class VocalyxAPIClient:
         filename: str,
         use_vad: bool = True,
         diarization: bool = False,
-        whisper_model: str = "small",
+        whisper_model: str = "large-v3",
         enrichment: bool = False,
         llm_model: Optional[str] = None
     ) -> Dict[str, Any]:

@@ -115,7 +115,7 @@ async def upload_audio(
     api_key: str = Form(...),
     use_vad: bool = Form(True),
     diarization: bool = Form(False),
-    whisper_model: str = Form("small"),
+    whisper_model: str = Form("large-v3"),
     enrichment: bool = Form(False),
     llm_model: Optional[str] = Form(None),
     token: str = Depends(get_current_token)

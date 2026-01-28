@@ -354,10 +354,11 @@
                 <input type="file" id="upload-file-input" accept="audio/*">
             </div>
             <div class="form-group upload-step">Étape 4 : Options</div>
-            <div class="form-group">
+                <div class="form-group">
                 <label for="upload-quality-slider">Qualité de transcription :</label>
                 <div class="quality-slider-container">
-                    <input type="range" id="upload-quality-slider" min="0" max="4" value="2" class="quality-slider">
+                    <!-- Par défaut, le nouveau modèle large-v3 est sélectionné (niveau "Haute") -->
+                    <input type="range" id="upload-quality-slider" min="0" max="4" value="3" class="quality-slider">
                     <div class="quality-labels">
                         <span class="quality-label" data-value="0">
                             <strong>Rapide</strong>
@@ -365,17 +366,17 @@
                         <span class="quality-label" data-value="1">
                             <strong>Modéré</strong>
                         </span>
-                        <span class="quality-label active" data-value="2">
+                        <span class="quality-label" data-value="2">
                             <strong>Équilibré</strong>
                         </span>
-                        <span class="quality-label" data-value="3">
+                        <span class="quality-label active" data-value="3">
                             <strong>Haute</strong>
                         </span>
                         <span class="quality-label" data-value="4">
                             <strong>Maximale</strong>
                         </span>
                     </div>
-                    <div class="quality-value-display" id="quality-value-display">Équilibré</div>
+                    <div class="quality-value-display" id="quality-value-display">Haute</div>
                 </div>
                 <div style="margin-top: 0.5rem;">
                     <input type="checkbox" id="upload-use-vad" checked>

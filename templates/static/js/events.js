@@ -101,7 +101,10 @@ const qualityLabels = document.querySelectorAll(".quality-label");
 const qualityValueDisplay = document.getElementById("quality-value-display");
 
 if (qualitySlider) {
-    const qualityModels = ["tiny", "base", "small", "medium", "large-v3-turbo"];
+    // Mapping des niveaux de qualité vers les modèles Whisper.
+    // Haite  (index 3)  -> large-v3-turbo
+    // Maximale (index 4) -> large-v3 (modèle principal recommandé)
+    const qualityModels = ["tiny", "base", "small", "large-v3-turbo", "large-v3"];
     const qualityNames = ["Rapide", "Modéré", "Équilibré", "Haute", "Maximale"];
     
     function updateQualityDisplay(value) {
@@ -123,13 +126,13 @@ if (qualitySlider) {
         });
         
         // Mettre à jour la couleur du curseur selon la position
-        // Gradient simple du vert (tiny) au violet (large-v3-turbo)
+        // Gradient simple du vert (tiny) au violet (large-v3)
         const colors = [
             "#10b981",  // Tiny - vert
             "#3b82f6",  // Base - bleu
             "#f59e0b",  // Small - orange
-            "#ef4444",  // Medium - rouge
-            "#8b5cf6"   // Large-v3-turbo - violet
+            "#ef4444",  // large-v3-turbo - rouge
+            "#8b5cf6"   // large-v3 - violet
         ];
         
         // Calculer le gradient : montrer la couleur jusqu'à la position actuelle
@@ -195,9 +198,10 @@ if (uploadSubmitBtn) {
         
         // Récupérer la qualité sélectionnée
         const qualitySlider = document.getElementById("upload-quality-slider");
-        const qualityValue = qualitySlider?.value || "2";
-        const qualityModels = ["tiny", "base", "small", "medium", "large-v3-turbo"];
-        const whisperModel = qualityModels[parseInt(qualityValue)] || "small";
+        const qualityValue = qualitySlider?.value || "3";
+        // Même mapping que plus haut : 0=tiny, 1=base, 2=small, 3=large-v3-turbo, 4=large-v3
+        const qualityModels = ["tiny", "base", "small", "large-v3-turbo", "large-v3"];
+        const whisperModel = qualityModels[parseInt(qualityValue)] || "large-v3";
 
         if (!projectName || !apiKey) {
             showToast("Projet ou Clé API manquant.", "warning");

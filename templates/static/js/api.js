@@ -197,7 +197,7 @@ class VocalyxDashboardAPI {
     // TRANSCRIPTIONS
     // ========================================================================
     
-    async uploadAudio(file, projectName, apiKey, useVad = true, useDiarization = false, whisperModel = "small", enrichment = false, llmModel = null) {
+    async uploadAudio(file, projectName, apiKey, useVad = true, useDiarization = false, whisperModel = "large-v3", enrichment = false, llmModel = null) {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('project_name', projectName);
