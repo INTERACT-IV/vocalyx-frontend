@@ -191,7 +191,10 @@ class VocalyxAPIClient:
         filename: str,
         use_vad: bool = True,
         diarization: bool = False,
-        whisper_model: str = "large-v3"
+        whisper_model: str = "large-v3",
+        enrichment: bool = False,
+        llm_model: Optional[str] = None,
+        initial_prompt: Optional[str] = None
     ) -> Dict[str, Any]:
         """Crée une nouvelle transcription"""
         try:
@@ -200,8 +203,18 @@ class VocalyxAPIClient:
                 "project_name": project_name,
                 "use_vad": str(use_vad).lower(),
                 "diarization": str(diarization).lower(),
-                "whisper_model": whisper_model
+                "whisper_model": whisper_model,
+                "enrichment": str(enrichment).lower()
             }
+            
+            # Ajouter llm_model seulement si fourni
+            if llm_model:
+                data["llm_model"] = llm_model
+            
+            # Ajouter initial_prompt seulement s'il n'est pas vide
+            if initial_prompt and initial_prompt.strip():
+                data["initial_prompt"] = initial_prompt.strip()
+            
             headers = {"X-API-Key": api_key}
             
             response = await self.async_client.post(

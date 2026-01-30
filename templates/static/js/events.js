@@ -19,6 +19,9 @@ if (openUploadBtn) {
 if (uploadModalClose) {
     uploadModalClose.onclick = () => {
         if (uploadModal) uploadModal.style.display = "none";
+        // Nettoyer le champ initial_prompt lors de la fermeture
+        const initialPromptInput = document.getElementById("upload-initial-prompt");
+        if (initialPromptInput) initialPromptInput.value = "";
     };
 }
 
@@ -195,6 +198,7 @@ if (uploadSubmitBtn) {
         const useDiarization = document.getElementById("upload-use-diarization")?.checked;
         const enrichment = document.getElementById("upload-enrichment")?.checked || false;
         const llmModel = enrichment ? (document.getElementById("upload-llm-model")?.value || null) : null;
+        const initialPrompt = document.getElementById("upload-initial-prompt")?.value.trim() || null;
         
         // Récupérer la qualité sélectionnée
         const qualitySlider = document.getElementById("upload-quality-slider");
@@ -213,7 +217,7 @@ if (uploadSubmitBtn) {
         
         try {
             // L'upload reste en HTTP, c'est normal
-            const result = await api.uploadAudio(file, projectName, apiKey, useVad, useDiarization, whisperModel, enrichment, llmModel);
+            const result = await api.uploadAudio(file, projectName, apiKey, useVad, useDiarization, whisperModel, enrichment, llmModel, initialPrompt);
             
             showToast(`✅ Upload (Projet: ${projectName}) réussi !`, "success");
             
@@ -225,6 +229,8 @@ if (uploadSubmitBtn) {
         } finally {
             if (loadingOverlay) loadingOverlay.style.display = "none";
             if (uploadFileInput) uploadFileInput.value = "";
+            const initialPromptInput = document.getElementById("upload-initial-prompt");
+            if (initialPromptInput) initialPromptInput.value = "";
         }
     });
 }

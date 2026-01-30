@@ -388,6 +388,20 @@
                 </div>
             </div>
             
+            <div class="form-group upload-step">Étape 4.5 : Pre Prompt (optionnel)</div>
+            <div class="form-group">
+                <label for="upload-initial-prompt">Pre Prompt :</label>
+                <textarea 
+                    id="upload-initial-prompt" 
+                    placeholder="Texte optionnel pour guider la transcription (ex: noms propres, terminologie spécialisée)..."
+                    rows="3"
+                    style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; resize: vertical;"
+                ></textarea>
+                <small style="color: #666; display: block; margin-top: 0.25rem;">
+                    Le pre prompt guide uniquement la première fenêtre de transcription (~30s). Si vide, aucun pre prompt n'est utilisé.
+                </small>
+            </div>
+            
             <div class="form-group upload-step">Étape 5 : Enrichissement (optionnel)</div>
             <div class="form-group">
                 <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">

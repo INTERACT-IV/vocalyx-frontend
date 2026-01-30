@@ -118,6 +118,7 @@ async def upload_audio(
     whisper_model: str = Form("large-v3"),
     enrichment: bool = Form(False),
     llm_model: Optional[str] = Form(None),
+    initial_prompt: Optional[str] = Form(None),
     token: str = Depends(get_current_token)
 ):
     """Upload un fichier audio pour transcription (proxy vers l'API)"""
@@ -138,7 +139,8 @@ async def upload_audio(
             diarization=diarization,
             whisper_model=whisper_model,
             enrichment=enrichment,
-            llm_model=llm_model
+            llm_model=llm_model,
+            initial_prompt=initial_prompt
         )
         return JSONResponse(content=result, status_code=201)
     except Exception as e:
