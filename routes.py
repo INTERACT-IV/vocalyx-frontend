@@ -129,6 +129,9 @@ async def upload_audio(
         file_content = await file.read()
         filename = file.filename or "audio.wav"
         
+        # Log pour déboguer le pre prompt
+        logger.info(f"📝 Frontend upload - initial_prompt reçu: {repr(initial_prompt)} (type: {type(initial_prompt).__name__})")
+        
         # Appeler l'API pour créer la transcription
         result = await api_client.create_transcription(
             project_name=project_name,

@@ -197,6 +197,9 @@ class VocalyxAPIClient:
     ) -> Dict[str, Any]:
         """Crée une nouvelle transcription"""
         try:
+            # Log pour déboguer le pre prompt
+            logger.info(f"📝 API Client - initial_prompt reçu: {repr(initial_prompt)} (type: {type(initial_prompt).__name__})")
+            
             files = {"file": (filename, file_content)}
             data = {
                 "project_name": project_name,
@@ -213,6 +216,9 @@ class VocalyxAPIClient:
             # Ajouter initial_prompt seulement s'il n'est pas vide
             if initial_prompt and initial_prompt.strip():
                 data["initial_prompt"] = initial_prompt.strip()
+                logger.info(f"✅ API Client - initial_prompt ajouté au data: {repr(data['initial_prompt'][:50])}...")
+            else:
+                logger.info(f"⚠️ API Client - initial_prompt vide ou None, non ajouté au data")
             
             headers = {"X-API-Key": api_key}
             

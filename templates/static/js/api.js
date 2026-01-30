@@ -212,8 +212,18 @@ class VocalyxDashboardAPI {
         }
         
         // Ajouter initial_prompt seulement s'il n'est pas vide
+        console.log("📝 Frontend API - initialPrompt avant ajout:", {
+            value: initialPrompt,
+            type: typeof initialPrompt,
+            isTruthy: !!initialPrompt,
+            trimmed: initialPrompt ? initialPrompt.trim() : null,
+            length: initialPrompt ? initialPrompt.trim().length : 0
+        });
         if (initialPrompt && initialPrompt.trim().length > 0) {
             formData.append('initial_prompt', initialPrompt.trim());
+            console.log("✅ Frontend API - initial_prompt ajouté au FormData");
+        } else {
+            console.log("⚠️ Frontend API - initial_prompt vide ou null, non ajouté au FormData");
         }
         
         const response = await fetch(`${this.baseURL}/api/upload`, {

@@ -198,7 +198,17 @@ if (uploadSubmitBtn) {
         const useDiarization = document.getElementById("upload-use-diarization")?.checked;
         const enrichment = document.getElementById("upload-enrichment")?.checked || false;
         const llmModel = enrichment ? (document.getElementById("upload-llm-model")?.value || null) : null;
-        const initialPrompt = document.getElementById("upload-initial-prompt")?.value.trim() || null;
+        
+        // Récupérer le pre prompt
+        const initialPromptElement = document.getElementById("upload-initial-prompt");
+        const initialPromptRaw = initialPromptElement?.value || "";
+        const initialPrompt = initialPromptRaw.trim() || null;
+        console.log("📝 Frontend JS - initial_prompt récupéré:", {
+            element: initialPromptElement ? "trouvé" : "non trouvé",
+            rawValue: initialPromptRaw,
+            trimmed: initialPromptRaw.trim(),
+            final: initialPrompt
+        });
         
         // Récupérer la qualité sélectionnée
         const qualitySlider = document.getElementById("upload-quality-slider");
